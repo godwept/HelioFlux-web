@@ -12,7 +12,7 @@
 
 // TODO: Replace with your Cloudflare Worker URL after deployment
 // Example: https://api.your-worker.workers.dev
-const PROXY_BASE_URL = '/api/helioviewer';
+const PROXY_BASE_URL = 'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/helioviewer/api/helioviewer';
 
 // AIA 304Å Source ID (chromosphere view)
 const AIA_304_SOURCE_ID = 13;
