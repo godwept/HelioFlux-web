@@ -1,31 +1,30 @@
 import './App.css'
+import SolarHero from './components/SolarHero'
+import Carousel from './components/Carousel'
 
 function App() {
   return (
     <div className="app">
       <header className="app-header">
         <div>
-          <p className="eyebrow">HelioFlux</p>
-          <h1>Solar Weather Dashboard</h1>
+          <h1 className="app-title">HELIOFLUX</h1>
           <p className="subtitle">
             Real-time solar imagery, space weather, and activity alerts in one
             mobile-first experience.
           </p>
         </div>
-        <button className="primary-button" type="button">
-          Launch overview
-        </button>
       </header>
 
       <main className="app-main">
-        <section className="panel">
-          <div className="panel-header">
+        <section className="hero-section">
+          <div className="hero-section__header">
             <h2>Solar Imagery</h2>
             <span className="status-badge">Live</span>
           </div>
-          <p>Animated solar frames and coronagraph imagery will appear here.</p>
-          <div className="panel-placeholder">Hero animation placeholder</div>
+          <SolarHero />
         </section>
+
+        <Carousel />
 
         <section className="panel">
           <div className="panel-header">
