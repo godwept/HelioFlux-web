@@ -1,0 +1,645 @@
+```text
+HelioFlux Web Conversion - AI Agent Guidance (Mobile Web App)
+═════════════════════════════════════════════════════════════════════════════
+
+PROJECT OVERVIEW
+═════════════════════════════════════════════════════════════════════════════
+
+Convert HelioFlux from .NET MAUI (Android/iOS) to a CloudFlare Pages/Workers 
+MOBILE WEB APP (portrait mode only, 320px-428px width).
+
+Purpose: Real-time solar imagery, space weather monitoring, CME tracking dashboard.
+Target: Progressive Web App (PWA) installable on iOS/Android home screens.
+
+CURRENT MOBILE APP FEATURES
+═════════════════════════════════════════════════════════════════════════════
+
+1. SOLAR IMAGERY (Implemented)
+   - Live SDO AIA 304Å images via Helioviewer API
+   - 30-frame animated solar visualization with alpha blending
+   - LASCO C2/C3 coronagraph images
+   - ENLIL solar wind model animations
+   - HMI Magnetogram with active region overlay
+
+2. SPACE WEATHER MONITORING (Implemented)
+   - Solar wind metrics: speed, density, temperature
+   - Magnetic field data: Bt, Bx, By, Bz components
+   - Kp index visualization (geomagnetic activity)
+   - Live charts with zoom/pan
+   - 60-second auto-refresh
+
+3. SOLAR ACTIVITY TRACKING (Implemented)
+   - Solar flare detection (M-class and above, 72hr history)
+   - GOES X-ray flux monitoring (4 channels)
+   - Flare probability forecasts (C/M/X class)
+   - ACE EPAM proton/electron flux
+
+4. UI/UX DESIGN
+   - Dark theme (charcoal backgrounds, orange/amber accents)
+   - Three-tab navigation: Home, Space Weather, Solar Activity
+   - Hero solar animation on home screen
+   - Horizontal scrollable card carousel
+   - Pull-to-refresh on all views
+   - Status badges with pulse animations
+
+═════════════════════════════════════════════════════════════════════════════
+API ENDPOINTS & DATA STRUCTURES (COMPLETE REFERENCE)
+═════════════════════════════════════════════════════════════════════════════
+
+1. HELIOVIEWER API - Solar Imagery
+───────────────────────────────────────────────────────────────────────────
+
+BASE URL: https://api.helioviewer.org/v2/
+
+A. Get Closest Image ID
+────────────────────────
+Endpoint: GET /getClosestImage/
+Query Params:
+  - date: ISO8601 datetime with Z (e.g., "2026-02-09T14:30:00Z")
+  - sourceId: Integer (13 = AIA 304, see mapping below)
+
+Response:
+{
+  "id": "87654321",  // Can be string or number
+  "date": "2026-02-09 14:29:45",
+  "name": "AIA 304"
+}
+
+B. Download Image
+─────────────────
+Endpoint: GET /downloadImage/
+Query Params:
+  - id: Image ID from getClosestImage
+  - width: Integer (512 recommended for mobile)
+  - type: "png" or "jpg"
+
+Response: Binary image data
+
+C. Source ID Mapping (SDO AIA Wavelengths)
+───────────────────────────────────────────
+  94Å  = 8
+  131Å = 9
+  171Å = 10
+  193Å = 11
+  211Å = 12
+  304Å = 13  ← DEFAULT (chromosphere view)
+  335Å = 14
+  1600Å = 15
+  1700Å = 16
+  4500Å = 17
+
+D. Implementation Notes
+───────────────────────
+- Download 30 frames concurrently (every 15 min over 7.5 hours)
+- Cache frames locally for animation playback
+- Reverse frame order (oldest to newest) for forward time playback
+
+
+2. NOAA SWPC - Solar Wind Data
+───────────────────────────────────────────────────────────────────────────
+
+A. Solar Wind Magnetic Field (3-day history)
+─────────────────────────────────────────────
+Endpoint: GET https://services.swpc.noaa.gov/products/solar-wind/mag-3-day.json
+
+Response Format: Array of arrays (first row is header)
+[
+  ["time_tag","bx_gsm","by_gsm","bz_gsm","lon_gsm","lat_gsm","bt"],
+  ["2026-02-09T14:28:00.000Z","-2.1","1.5","0.3","90.2","8.7","2.6"],
+  ...
+]
+
+Field Descriptions:
+  - time_tag: ISO8601 UTC timestamp
+  - bx_gsm, by_gsm, bz_gsm: Magnetic field components (nT) in GSM coordinates
+  - lon_gsm, lat_gsm: Longitude/latitude angles (degrees)
+  - bt: Total magnetic field strength (nT)
+
+Parsing:
+  - Skip first row (header)
+  - Parse each array element as string
+  - Convert to doubles for numeric values
+  - All timestamps in UTC
+
+B. Solar Wind Plasma Data (3-day history)
+──────────────────────────────────────────
+Endpoint: GET https://services.swpc.noaa.gov/products/solar-wind/plasma-3-day.json
+
+Response Format: Array of arrays
+[
+  ["time_tag","density","speed","temperature"],
+  ["2026-02-09T14:27:00.000Z","5.2","425.3","108567"],
+  ...
+]
+
+Field Descriptions:
+  - time_tag: ISO8601 UTC timestamp
+  - density: Proton density (particles/cm³)
+  - speed: Solar wind speed (km/s)
+  - temperature: Proton temperature (Kelvin)
+
+Parsing Notes:
+  - Some values may be empty strings (missing data) → default to 0
+  - Merge with magnetic data by timestamp (5-minute tolerance)
+  - Filter out entries with speed=0 AND density=0
+
+C. Kp Index (Planetary Geomagnetic Activity)
+─────────────────────────────────────────────
+Endpoint: GET https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json
+
+Response Format: Array of arrays
+[
+  ["time_tag","Kp","a_running","station_count"],
+  ["2026-02-09 12:00:00.000","2.67","12","13"],
+  ...
+]
+
+Field Descriptions:
+  - time_tag: UTC datetime string
+  - Kp: Kp index value (0-9, can be fractional like 2.67)
+  - a_running: Running A-index
+  - station_count: Number of stations reporting
+
+Kp Activity Levels:
+  0-2: Quiet
+  3-4: Unsettled
+  5: Minor storm
+  6: Moderate storm
+  7-8: Strong storm
+  9: Severe storm
+
+
+3. NOAA SWPC - Solar Flare Events
+───────────────────────────────────────────────────────────────────────────
+
+A. Daily Event Reports (via HTTPS)
+───────────────────────────────────
+Primary: GET https://services.swpc.noaa.gov/text/{YYYYMMDD}events.txt
+Fallback: ftp://ftp.swpc.noaa.gov/pub/indices/events/{YYYYMMDD}events.txt
+
+Example filename: 20260209events.txt
+
+Response Format: Fixed-width text file
+Event    Begin    Max       End  Obs  Q  Type  Loc/Frq   Particulars       Reg#
+2470     1405     1431      1449  G18  5   XRA  1-8A      C1.2    2.9E-03   4353
+2490 +   2131     2140      2158  G18  5   XRA  1-8A      M5.5    5.5E-05   4363
+
+Field Descriptions:
+  - Event: Event ID
+  - Begin/Max/End: Time in HHMM format (UTC, file date)
+  - Obs: Observatory (G18 = GOES-18, G19 = GOES-19)
+  - Q: Quality code (5 = good)
+  - Type: Event type (XRA = X-Ray)
+  - Loc/Frq: Location or frequency (1-8A = instrument band)
+  - Particulars: Flare class + peak flux
+  - Reg#: NOAA Active Region number
+
+Parsing Requirements:
+  - Filter for Type == "XRA" only
+  - Extract flare class from Particulars (e.g., "M5.5")
+  - Filter for M-class and above (≥ M1.0)
+  - Parse times: HHMM → DateTime with file date
+  - Handle midnight rollover (end < begin → add 1 day)
+
+
+4. NOAA SWPC - GOES X-Ray Flux
+───────────────────────────────────────────────────────────────────────────
+
+A. Primary Satellite (GOES-18)
+───────────────────────────────
+Endpoint: GET https://services.swpc.noaa.gov/json/goes/primary/xrays-3-day.json
+
+B. Secondary Satellite (GOES-19)
+─────────────────────────────────
+Endpoint: GET https://services.swpc.noaa.gov/json/goes/secondary/xrays-3-day.json
+
+Response Format: Array of objects
+[
+  {
+    "time_tag": "2026-02-09T14:24:00Z",
+    "satellite": 19,
+    "flux": 7.978210305736866e-7,
+    "observed_flux": 8.87741123278829e-7,
+    "electron_correction": 8.992011402142452e-8,
+    "electron_contaminaton": false,  // NOTE: API has typo
+    "energy": "0.1-0.8nm"
+  },
+  ...
+]
+
+Field Descriptions:
+  - time_tag: ISO8601 UTC timestamp
+  - satellite: 18 or 19
+  - flux: Corrected X-ray flux (W/m²) ← USE THIS VALUE
+  - observed_flux: Raw flux before electron correction
+  - electron_correction: Correction factor
+  - electron_contaminaton: Boolean (NOTE: typo in API)
+  - energy: "0.05-0.4nm" (short) or "0.1-0.8nm" (long)
+
+Chart Requirements:
+  - Display 4 series:
+    * GOES-18 Short (0.05-0.4nm)
+    * GOES-18 Long (0.1-0.8nm)
+    * GOES-19 Short (0.05-0.4nm)
+    * GOES-19 Long (0.1-0.8nm)
+  - Use `flux` field (not observed_flux)
+  - Log scale Y-axis
+  - Show C/M/X class threshold lines:
+    * X-class: 1e-4 W/m²
+    * M-class: 1e-5 W/m²
+    * C-class: 1e-6 W/m²
+
+
+5. NOAA SWPC - Flare Probability Forecast
+───────────────────────────────────────────────────────────────────────────
+
+Endpoint: GET https://services.swpc.noaa.gov/text/3-day-solar-geomag-predictions.txt
+
+Response Format: Plain text with sections
+
+Example:
+:Issued: 2026 Feb 09 2200 UTC
+:Prediction_dates:   2026 Feb 10   2026 Feb 11   2026 Feb 12
+# Region     Class C      M             X             P
+:Reg_Prob: 2026 Feb 09
+  4347          0         0             0             0
+  4357         35        10             1             1
+  4363         10         0             0             0
+
+Parsing Requirements:
+  - Find ":Issued:" line → parse datetime
+  - Find ":Prediction_dates:" → parse first date
+  - Find "# Region     Class C      M" section header
+  - Skip ":Reg_Prob: YYYY Mon DD" line
+  - Parse region rows: whitespace-separated values
+    * Column 0: Region number
+    * Column 1: C-class probability (%)
+    * Column 2: M-class probability (%)
+    * Column 3: X-class probability (%)
+    * Column 4: Proton event probability (%)
+  - Take MAXIMUM value for each class across all regions
+  - Display: "C: 35% | M: 10% | X: 1%"
+
+
+6. NOAA SWPC - ACE EPAM Particle Data
+───────────────────────────────────────────────────────────────────────────
+
+Endpoint: ftp://ftp.swpc.noaa.gov/pub/lists/ace2/{YYYYMM}_ace_epam_1h.txt
+
+Example: ftp://ftp.swpc.noaa.gov/pub/lists/ace2/202602_ace_epam_1h.txt
+Fallback: Try previous month if current month unavailable
+
+Response Format: Fixed-width text file (hourly data)
+# UT Date   Time  Julian  of the  ----- Electron -----   ------------------- Protons keV -------------------  Anis.
+# YR MO DA  HHMM    Day    Day    S    38-53   175-315   S    47-68   115-195   310-580   795-1193 1060-1900  Index
+2026 02 09  1400   61082       0  0  3.56e+03  2.19e+01  0  8.06e+03  1.85e+01  1.86e+00  2.70e-01  7.15e-02  -1.00
+
+Field Positions (whitespace-separated):
+  [0] Year
+  [1] Month
+  [2] Day
+  [3] HHMM (time)
+  [4] Julian day
+  [5] Fraction of day
+  [6] Electron status (0=good, 4/6/7/8=bad, 9=no data)
+  [7] Electron 38-53 keV (scientific notation)
+  [8] Electron 175-315 keV
+  [9] Proton status
+  [10] Proton 47-68 keV
+  [11] Proton 115-195 keV
+  [12] Proton 310-580 keV
+  [13] Proton 795-1193 keV
+  [14] Proton 1060-1900 keV
+  [15] Anisotropy index
+
+Parsing Requirements:
+  - Skip lines starting with '#'
+  - Parse time: HHMM → HH:MM (e.g., "1400" → 14:00)
+  - Missing data sentinel: -1.00e+05 → convert to NaN
+  - Display last 72 hours only
+  - Units: Differential Flux particles/(cm²-s-ster-MeV)
+  - Use exponential notation parsing (3.56e+03)
+
+
+7. LASCO Coronagraph Images
+──────────────────────────────────────────────���────────────────────────────
+
+A. LASCO C2 (Inner Corona, 1.5-6 solar radii)
+──────────────────────────────────────────────
+Animated GIF: https://soho.nascom.nasa.gov/data/LATEST/current_c2.gif
+Static JPG: https://soho.nascom.nasa.gov/data/realtime/c2/1024/latest.jpg
+
+B. LASCO C3 (Outer Corona, 3.7-30 solar radii)
+───────────────────────────────────────────────
+Animated GIF: https://soho.nascom.nasa.gov/data/LATEST/current_c3.gif
+Static JPG: https://soho.nascom.nasa.gov/data/realtime/c3/1024/latest.jpg
+
+Implementation:
+  - Try animated GIF first (shows recent activity)
+  - Fallback to static JPG if GIF unavailable
+  - Cache with 20-minute expiry
+  - HTTP fallback if HTTPS fails
+
+
+8. HMI Magnetogram + Active Regions
+───────────────────────────────────────────────────────────────────────────
+
+A. Magnetogram Image
+────────────────────
+Endpoint: GET https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_HMIB.jpg
+
+Response: Binary image data (1024x1024px colorized magnetogram)
+Cache: 30 minutes
+
+B. Active Region Data (HEK API)
+────────────────────────────────
+Base: http://www.lmsal.com/hek/her
+Query Params:
+  - cosec=2
+  - cmd=search
+  - type=column
+  - event_type=ar
+  - event_coordsys=helioprojective
+  - event_starttime=YYYY-MM-DDTHH:mm:ss
+  - event_endtime=YYYY-MM-DDTHH:mm:ss
+  - x1=-1200
+  - x2=1200
+  - y1=-1200
+  - y2=1200
+
+Response Format: JSON object
+{
+  "result": [
+    {
+      "ar_noaanum": 4357,
+      "hpc_x": 123.4,
+      "hpc_y": -567.8,
+      "ar_mcintoshcls": "Dac",
+      "ar_mtwilsoncls": "beta-gamma",
+      "event_starttime": "2026-02-08T12:00:00",
+      "event_endtime": "2026-02-09T12:00:00"
+    },
+    ...
+  ]
+}
+
+Field Descriptions:
+  - ar_noaanum: NOAA Active Region number
+  - hpc_x, hpc_y: Helioprojective coordinates (arcseconds from disk center)
+  - ar_mcintoshcls: McIntosh classification
+  - ar_mtwilsoncls: Mt. Wilson magnetic class (α, β, βγ, βγδ)
+
+Overlay Calculation:
+  - Solar disk radius ≈ 1000 arcsec
+  - Pixel position = 512 + (hpc_coord / 1000) * 512
+  - Only display regions on disk (|hpc_x| < 1000 AND |hpc_y| < 1000)
+
+
+9. ENLIL Solar Wind Prediction
+──────────────────────────────��────────────────────────────────────────────
+
+Endpoint: GET https://services.swpc.noaa.gov/images/animations/enlil/
+
+Response: HTML directory listing
+
+Implementation:
+  - Fetch directory listing
+  - Extract .jpg/.png filenames via regex: href="([^"]+?\.jpg|png)"
+  - Filter frames with timestamp pattern: \d{8}_\d{6}
+  - Group by run timestamp, select latest run
+  - Downsample to ~48 frames
+  - Download frames sequentially
+  - Cache for 2 hours
+  - Animate using Canvas or similar
+
+
+═════════════════════════════════════════════════════════════════════════
+TARGET WEB STACK (MOBILE-FIRST)
+═════════════════════════════════════════════════════════════════════════
+
+Framework: React (optimized for mobile)
+Hosting: CloudFlare Pages (static PWA)
+Serverless: CloudFlare Workers (API proxy, CORS handling)
+PWA: Workbox for service workers + offline caching
+Charting: Chart.js with chartjs-plugin-zoom (touch gestures)
+Animations: Canvas API (hardware-accelerated)
+State: Zustand (lightweight, <1KB) or React Context
+HTTP: fetch API with Workers proxy
+Gestures: Pointer Events API (unified touch/mouse)
+
+
+CLOUDFLARE WORKERS API PROXY
+═════════════════════════════════════════════════════════════════════════
+
+Required for CORS and FTP-to-HTTP conversion
+
+Example Worker (workers/api-proxy.js):
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    
+    // Helioviewer proxy
+    if (path.startsWith('/api/helioviewer')) {
+      const apiUrl = 'https://api.helioviewer.org/v2' + 
+        path.replace('/api/helioviewer', '') + url.search;
+      return fetch(apiUrl);
+    }
+    
+    // NOAA SWPC JSON endpoints
+    if (path.startsWith('/api/noaa/')) {
+      const apiUrl = 'https://services.swpc.noaa.gov' + 
+        path.replace('/api/noaa', '') + url.search;
+      return fetch(apiUrl);
+    }
+    
+    // FTP flare events (convert to HTTP)
+    if (path.startsWith('/api/flare-events/')) {
+      const date = path.split('/').pop().replace('.txt', '');
+      const ftpUrl = `ftp://ftp.swpc.noaa.gov/pub/indices/events/${date}events.txt`;
+      
+      // Implement FTP fetch or use HTTP mirror
+      const httpMirror = `https://services.swpc.noaa.gov/text/${date}events.txt`;
+      return fetch(httpMirror);
+    }
+    
+    return new Response('Not found', { status: 404 });
+  }
+}
+
+
+PWA MANIFEST
+═════════════════════════════════════════════════════════════════════════
+
+{
+  "name": "HelioFlux",
+  "short_name": "HelioFlux",
+  "description": "Real-time solar weather monitoring",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121212",
+  "theme_color": "#FF9500",
+  "icons": [
+    { "src": "/icons/192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/180.png", "sizes": "180x180", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
+
+
+MOBILE-SPECIFIC FEATURES
+═════════════════════════════════════════════════════════════════════════
+
+1. Safe Area Handling (iOS Notch/Home Bar)
+   CSS:
+   body {
+     padding-top: env(safe-area-inset-top);
+     padding-bottom: env(safe-area-inset-bottom);
+   }
+   
+   Viewport meta:
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, 
+     maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+2. Touch Gestures
+   - Horizontal swipe for card carousel (CSS scroll-snap)
+   - Pinch-to-zoom on charts (Chart.js zoom plugin)
+   - Pull-to-refresh (native + custom fallback)
+
+3. Visibility API (Battery Optimization)
+   document.addEventListener('visibilitychange', () => {
+     if (document.hidden) {
+       // Pause animations and timers
+     } else {
+       // Resume updates
+     }
+   });
+
+4. Vibration Feedback (Optional)
+   navigator.vibrate(10); // 10ms haptic tap
+
+5. Install Prompt
+   let deferredPrompt;
+   window.addEventListener('beforeinstallprompt', (e) => {
+     e.preventDefault();
+     deferredPrompt = e;
+     // Show install button
+   });
+
+
+DESIGN TOKENS (CSS VARIABLES)
+═════════════════════════════════════════════════════════════════════════
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #121212;
+  --bg-medium: #1E1E1E;
+  --bg-secondary: #2A2A2A;
+  
+  /* Text */
+  --text-primary: #FFFFFF;
+  --text-secondary: #E0E0E0;
+  --text-tertiary: #707070;
+  
+  /* Accents */
+  --solar-primary: #FF9500;  /* Orange for solar data */
+  --alert-red: #FF3B30;      /* Warnings/flares */
+  --data-cyan: #5AC8FA;      /* Neutral data */
+  
+  /* Mobile Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  
+  /* Touch Targets */
+  --touch-min: 44px;
+  
+  /* Safe Areas */
+  --safe-top: env(safe-area-inset-top);
+  --safe-bottom: env(safe-area-inset-bottom);
+  
+  /* Bottom Nav */
+  --nav-height: calc(60px + env(safe-area-inset-bottom));
+}
+
+
+CODING PRACTICES
+═════════════════════════════════════════════════════════════════════════
+
+1. File Size Limits
+   - Max 250 lines per component (mobile readability)
+   - Extract services into separate files
+   - Code-split routes (React.lazy)
+
+2. Best Practices
+   - Use async/await for all API calls
+   - Error boundaries around data-fetching components
+   - Memoize expensive computations (useMemo, useCallback)
+   - Debounce scroll handlers
+   - Lazy load images with IntersectionObserver
+
+3. Performance
+   - Service Worker cache-first strategy
+   - Virtual scrolling for long lists (react-window)
+   - Canvas animations with requestAnimationFrame
+   - Web Workers for JSON parsing (large datasets)
+
+4. Testing
+   - Jest + React Testing Library
+   - Mock API calls with MSW (Mock Service Worker)
+   - Test hooks independently
+   - Snapshot tests for UI components
+
+
+MOBILE PERFORMANCE TARGETS
+═════════════════════════════════════════════════════════════════════════
+
+- First Contentful Paint: < 1.2s (3G)
+- Time to Interactive: < 2.5s
+- Bundle size: < 300KB (gzipped)
+- Lighthouse score: > 95 (mobile)
+- Frame rate: 60 FPS for animations
+- Offline support: Full UI + last cached data
+
+
+NOTES FOR AI AGENT
+═════════════════════════════════════════════════════════════════════════
+
+CRITICAL REQUIREMENTS:
+- Mobile-only PWA (not responsive desktop)
+- Portrait orientation lock
+- Target viewport: 320px-428px
+- iOS Safari AND Chrome Android support
+- Safe-area handling MANDATORY (notch/home bar)
+- Test on REAL DEVICES, not just DevTools
+- All API responses documented above are EXACT field names
+- FTP endpoints need CloudFlare Worker proxy
+- GOES API has typo: "electron_contaminaton" (not contamination)
+- NOAA JSON endpoints use array-of-arrays format (first row = header)
+- Timestamps: some APIs use ISO8601, others use datetime strings
+- Missing data: check for empty strings, -1.00e+05, or 0 values
+
+API PARSING TIPS:
+- NOAA array responses: skip index 0 (header row)
+- Parse all numeric strings with culture-invariant parsing
+- Handle null/missing values gracefully (default to 0 or NaN)
+- Merge magnetic + plasma data by timestamp (5-min tolerance)
+- Filter flare events: Type=="XRA" AND class >= M1.0
+- Use `flux` field from GOES API (not `observed_flux`)
+
+OFFLINE/CACHING:
+- Cache solar images: 15 minutes
+- Cache space weather data: 60 seconds
+- Cache flare events: 5 minutes
+- Cache magnetogram: 30 minutes
+- Cache LASCO: 20 minutes
+- Cache ENLIL: 2 hours
+- Use Service Worker for offline support
+- Store last successful response in localStorage as fallback
+
+END OF MOBILE-FOCUSED GUIDANCE
+═════════════════════════════════════════════════════════════════════════
+```
