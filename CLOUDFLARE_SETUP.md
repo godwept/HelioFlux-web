@@ -91,8 +91,8 @@ const PROXY_BASE_URL = 'http://localhost:8787/api/helioviewer';
 After deploying, test the endpoints:
 
 ```bash
-# Test Helioviewer API
-curl "https://your-worker.workers.dev/api/helioviewer/getClosestImage/?date=2026-02-09T14:30:00Z&sourceId=13"
+# Test Helioviewer API (replace date with current UTC date/time)
+curl "https://your-worker.workers.dev/api/helioviewer/getClosestImage/?date=2024-02-09T14:30:00Z&sourceId=13"
 
 # Test NOAA API
 curl "https://your-worker.workers.dev/api/noaa/products/solar-wind/mag-3-day.json"

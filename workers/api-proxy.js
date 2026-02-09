@@ -37,7 +37,8 @@
  *   wrangler dev
  * 
  * Test endpoints:
- *   curl http://localhost:8787/api/helioviewer/getClosestImage/?date=2026-02-09T14:30:00Z&sourceId=13
+ *   curl http://localhost:8787/api/helioviewer/getClosestImage/?date=2024-02-09T14:30:00Z&sourceId=13
+ *   (Replace the date with current UTC date/time for real data)
  */
 
 export default {
