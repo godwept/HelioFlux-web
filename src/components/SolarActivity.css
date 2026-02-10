@@ -144,7 +144,12 @@
   object-fit: contain;
 }
 
-.solar-activity__image--fade {
+.solar-activity__image-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.solar-activity__image-layer--fade {
   animation: enlilFade 0.2s ease-in-out;
 }
 

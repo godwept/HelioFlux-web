@@ -158,6 +158,13 @@ const SolarActivity = () => {
   }, [imagery.enlil.frames.length]);
 
   const enlilFrame = imagery.enlil.frames[enlilFrameIndex];
+  const enlilFrameCount = imagery.enlil.frames.length;
+  const enlilPrevIndex = enlilFrameCount
+    ? (enlilFrameIndex - 1 + enlilFrameCount) % enlilFrameCount
+    : 0;
+  const enlilPrevFrame = enlilFrameCount
+    ? imagery.enlil.frames[enlilPrevIndex]
+    : null;
 
   const regionMarkers = useMemo(
     () =>
@@ -284,12 +291,19 @@ const SolarActivity = () => {
                 </div>
                 <div className="solar-activity__image-frame solar-activity__image-frame--contain">
                   {enlilFrame ? (
-                    <img
-                      key={enlilFrame}
-                      className="solar-activity__image--fade"
-                      src={enlilFrame}
-                      alt="WSA-Enlil solar wind model"
-                    />
+                    <>
+                      <img
+                        className="solar-activity__image-layer"
+                        src={enlilPrevFrame ?? enlilFrame}
+                        alt="WSA-Enlil solar wind model"
+                      />
+                      <img
+                        key={enlilFrame}
+                        className="solar-activity__image-layer solar-activity__image-layer--fade"
+                        src={enlilFrame}
+                        alt="WSA-Enlil solar wind model"
+                      />
+                    </>
                   ) : (
                     <div className="solar-activity__image-fallback">
                       No animation frames
