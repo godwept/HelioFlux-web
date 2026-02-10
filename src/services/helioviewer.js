@@ -18,7 +18,7 @@ const PROXY_BASE_URL = 'https://helioflux-api-proxy.mathew-stewart.workers.dev/a
 const AIA_304_SOURCE_ID = 13;
 
 // Image dimensions optimized for mobile
-const IMAGE_WIDTH = 512;
+const IMAGE_WIDTH = 1024;
 
 /**
  * Get the closest image ID for a specific date and source
@@ -58,7 +58,7 @@ export function getImageUrl(imageId, width = IMAGE_WIDTH) {
  */
 export async function fetchSolarFrames() {
   const now = new Date();
-  const frameCount = 30;
+  const frameCount = 60;
   const intervalMinutes = 15; // 15 minutes between frames
   
   // Calculate time range: 7.5 hours ago to now
