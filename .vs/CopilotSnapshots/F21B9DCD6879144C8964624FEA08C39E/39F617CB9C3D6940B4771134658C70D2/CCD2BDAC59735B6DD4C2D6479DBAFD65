@@ -10,8 +10,6 @@ const SolarHero = () => {
   const imagesRef = useRef([]);
   const currentFrameRef = useRef(0);
   const sizingLoggedRef = useRef(false);
-  const lastFrameTimeRef = useRef(0);
-  const animationStartRef = useRef(0);
 
   // Target ~5 FPS (200ms per frame)
   const FRAME_DELAY = 200;
@@ -86,56 +84,34 @@ const SolarHero = () => {
 
     const ctx = canvas.getContext('2d');
 
-    const drawFrame = (timestamp) => {
+    const drawFrame = () => {
+      const img = imagesRef.current[currentFrameRef.current];
       const size = canvas.offsetWidth;
-      if (size <= 0) return;
 
-      if (!animationStartRef.current) {
-        animationStartRef.current = timestamp;
-        lastFrameTimeRef.current = timestamp;
-      }
-
-      const elapsed = timestamp - lastFrameTimeRef.current;
-      const progress = Math.min(elapsed / FRAME_DELAY, 1);
-
-      const currentIndex = currentFrameRef.current;
-      const nextIndex = (currentIndex + 1) % imagesRef.current.length;
-      const currentImage = imagesRef.current[currentIndex];
-      const nextImage = imagesRef.current[nextIndex];
-
-      if (currentImage && currentImage.complete && size > 0) {
+      if (img && img.complete && size > 0) {
         if (!sizingLoggedRef.current) {
           console.log('SolarHero canvas vs image:', {
             canvasSize: size,
             imageSize: {
-              width: currentImage.naturalWidth,
-              height: currentImage.naturalHeight,
+              width: img.naturalWidth,
+              height: img.naturalHeight,
             },
             devicePixelRatio: window.devicePixelRatio || 1,
           });
           sizingLoggedRef.current = true;
         }
-
         ctx.clearRect(0, 0, size, size);
-        ctx.globalAlpha = 1;
-        ctx.drawImage(currentImage, 0, 0, size, size);
-
-        if (nextImage && nextImage.complete) {
-          ctx.globalAlpha = progress;
-          ctx.drawImage(nextImage, 0, 0, size, size);
-          ctx.globalAlpha = 1;
-        }
+        ctx.drawImage(img, 0, 0, size, size);
       }
 
-      if (elapsed >= FRAME_DELAY) {
-        lastFrameTimeRef.current = timestamp;
-        currentFrameRef.current = nextIndex;
-      }
+      // Move to next frame
+      currentFrameRef.current = (currentFrameRef.current + 1) % imagesRef.current.length;
 
-      animationRef.current = requestAnimationFrame(drawFrame);
+      // Schedule next frame
+      animationRef.current = setTimeout(drawFrame, FRAME_DELAY);
     };
 
-    animationRef.current = requestAnimationFrame(drawFrame);
+    drawFrame();
   };
 
   useEffect(() => {
@@ -177,7 +153,7 @@ const SolarHero = () => {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         if (animationRef.current) {
-          cancelAnimationFrame(animationRef.current);
+          clearTimeout(animationRef.current);
         }
       } else if (!loading && !error && imagesRef.current.length > 0) {
         startAnimation();
