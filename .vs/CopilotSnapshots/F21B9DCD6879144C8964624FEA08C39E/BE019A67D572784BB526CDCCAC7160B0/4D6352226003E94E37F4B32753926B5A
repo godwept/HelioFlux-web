@@ -17,6 +17,22 @@ function App() {
         </section>
 
         <Carousel />
+
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Space Weather</h2>
+            <span className="status-badge muted">Calm</span>
+          </div>
+          <p>Solar wind metrics, magnetic field charts, and Kp index cards.</p>
+        </section>
+
+        <section className="panel">
+          <div className="panel-header">
+            <h2>Solar Activity</h2>
+            <span className="status-badge alert">Watch</span>
+          </div>
+          <p>Flare detection, X-ray flux monitoring, and probability outlooks.</p>
+        </section>
       </main>
 
       <nav className="bottom-nav" aria-label="Primary">

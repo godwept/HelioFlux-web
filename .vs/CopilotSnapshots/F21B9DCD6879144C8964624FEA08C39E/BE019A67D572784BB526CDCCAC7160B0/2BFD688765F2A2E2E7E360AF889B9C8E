@@ -4,8 +4,8 @@
   aspect-ratio: 1;
   border-radius: 16px;
   overflow: hidden;
-  background: transparent;
-  box-shadow: 0 24px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(255, 149, 0, 0.2);
+  background: var(--bg-secondary);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
 .solar-hero__canvas {

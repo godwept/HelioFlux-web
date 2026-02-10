@@ -43,11 +43,10 @@ const Carousel = () => {
   return (
     <div className="carousel">
       <div className="carousel__header">
-        <div className="carousel__badges">
-          <span className="carousel__metric carousel__metric--kp">KP: 2</span>
-          <span className="carousel__metric carousel__metric--flare">Flares: Low</span>
-          <span className="carousel__metric carousel__metric--bz">Bz: -3 nT</span>
-        </div>
+        <h2 className="carousel__title">Quick Status</h2>
+        <button className="carousel__view-all" type="button">
+          View All
+        </button>
       </div>
       <div className="carousel__track">
         {cards.map(card => (

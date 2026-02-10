@@ -1,45 +1,30 @@
 ﻿.carousel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
+  gap: var(--space-md);
 }
 
 .carousel__header {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: var(--space-md);
   padding: 0 var(--space-xs);
 }
 
-.carousel__badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-}
-
-.carousel__metric {
-  border-radius: 999px;
-  padding: 0.35rem 0.75rem;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+.carousel__title {
+  font-size: 1.25rem;
   font-weight: 600;
+  margin: 0;
 }
 
-.carousel__metric--kp {
-  background: rgba(255, 149, 0, 0.2);
+.carousel__view-all {
+  background: transparent;
+  border: none;
   color: var(--solar-primary);
-}
-
-.carousel__metric--flare {
-  background: rgba(255, 59, 48, 0.2);
-  color: var(--alert-red);
-}
-
-.carousel__metric--bz {
-  background: rgba(90, 200, 250, 0.18);
-  color: var(--data-cyan);
+  font-size: 0.875rem;
+  padding: 0;
+  text-decoration: none;
 }
 
 .carousel__track {
@@ -50,7 +35,7 @@
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: var(--space-sm) var(--space-xs) var(--space-lg);
+  padding: var(--space-xs) var(--space-xs) var(--space-md);
   margin: 0 calc(var(--space-md) * -1);
   padding-left: var(--space-md);
   padding-right: var(--space-md);
@@ -71,7 +56,6 @@
   gap: var(--space-sm);
   scroll-snap-align: start;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  min-height: 140px;
 }
 
 .carousel__card-header {

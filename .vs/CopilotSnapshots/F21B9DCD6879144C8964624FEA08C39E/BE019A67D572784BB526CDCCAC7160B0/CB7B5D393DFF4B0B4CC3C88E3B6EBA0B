@@ -8,7 +8,7 @@
   -moz-osx-font-smoothing: grayscale;
   color-scheme: dark;
 
-  --bg-primary: #000000;
+  --bg-primary: #121212;
   --bg-medium: #1e1e1e;
   --bg-secondary: #2a2a2a;
   --text-primary: #ffffff;
