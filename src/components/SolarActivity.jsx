@@ -119,7 +119,7 @@ const SolarActivity = () => {
 
     const interval = setInterval(() => {
       setEnlilFrameIndex(index => (index + 1) % imagery.enlil.frames.length);
-    }, 250);
+    }, 200);
 
     return () => clearInterval(interval);
   }, [imagery.enlil.frames.length]);
@@ -249,9 +249,14 @@ const SolarActivity = () => {
                   <h4>WSA-Enlil</h4>
                   <span className="solar-activity__source">NOAA</span>
                 </div>
-                <div className="solar-activity__image-frame">
+                <div className="solar-activity__image-frame solar-activity__image-frame--contain">
                   {enlilFrame ? (
-                    <img src={enlilFrame} alt="WSA-Enlil solar wind model" />
+                    <img
+                      key={enlilFrame}
+                      className="solar-activity__image--fade"
+                      src={enlilFrame}
+                      alt="WSA-Enlil solar wind model"
+                    />
                   ) : (
                     <div className="solar-activity__image-fallback">
                       No animation frames
