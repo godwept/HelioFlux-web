@@ -28,10 +28,13 @@ export async function fetchNews() {
     const source = sourceEl?.textContent ?? '';
     const sourceUrl = sourceEl?.getAttribute('url') ?? '';
     const description = item.querySelector('description')?.textContent ?? '';
+    const mediaContent = item.getElementsByTagName('media:content')[0];
+    const mediaThumb = item.getElementsByTagName('media:thumbnail')[0];
+    const enclosure = item.getElementsByTagName('enclosure')[0];
     const imageUrl =
-      item.querySelector('media\\:content')?.getAttribute('url') ??
-      item.querySelector('media\\:thumbnail')?.getAttribute('url') ??
-      item.querySelector('enclosure')?.getAttribute('url') ??
+      mediaContent?.getAttribute('url') ??
+      mediaThumb?.getAttribute('url') ??
+      enclosure?.getAttribute('url') ??
       getImageFromDescription(description);
 
     if (title && link) {
