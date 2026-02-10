@@ -30,6 +30,17 @@ async function fetchText(url) {
   return response.text();
 }
 
+async function fetchTextOptional(url) {
+  const response = await fetch(url);
+  if (response.status === 204 || response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return response.text();
+}
+
 async function fetchJson(url) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -163,6 +174,97 @@ export async function fetchXrayFlux() {
   const parsed = parseXraySeries(combined);
   const cutoff = Date.now() - 72 * 60 * 60 * 1000;
   return parsed.filter(entry => entry.timestamp.valueOf() >= cutoff);
+}
+
+const parseFlareEvents = (text, fileDate) => {
+  const events = [];
+  const lines = text.split(/\r?\n/);
+
+  lines.forEach(line => {
+    if (!line.trim() || line.startsWith('#')) {
+      return;
+    }
+
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 9) {
+      return;
+    }
+
+    const eventType = parts[6];
+    if (eventType !== 'XRA') {
+      return;
+    }
+
+    const flareClass = parts[8];
+    if (!flareClass || !/^[A-Z]/.test(flareClass)) {
+      return;
+    }
+
+    const classLetter = flareClass[0];
+    const classValue = parseFloat(flareClass.slice(1)) || 0;
+    if (classLetter === 'M' && classValue < 1) {
+      return;
+    }
+    if (classLetter !== 'M' && classLetter !== 'X') {
+      return;
+    }
+
+    const maxTime = parts[2];
+    if (!maxTime || maxTime.length < 3) {
+      return;
+    }
+
+    const hours = maxTime.padStart(4, '0').slice(0, 2);
+    const minutes = maxTime.padStart(4, '0').slice(2, 4);
+    const timestamp = new Date(
+      `${fileDate}T${hours}:${minutes}:00Z`
+    );
+    if (Number.isNaN(timestamp.valueOf())) {
+      return;
+    }
+
+    events.push({
+      id: parts[0],
+      class: flareClass,
+      timestamp,
+      observatory: parts[4],
+      region: parts[10] ?? null,
+    });
+  });
+
+  return events;
+};
+
+const formatEventDate = date =>
+  `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}${String(
+    date.getUTCDate()
+  ).padStart(2, '0')}`;
+
+export async function fetchRecentFlares() {
+  const now = new Date();
+  const days = [0, 1, 2].map(offset => {
+    const date = new Date(now.getTime() - offset * 24 * 60 * 60 * 1000);
+    return formatEventDate(date);
+  });
+
+  const results = await Promise.all(
+    days.map(async dateKey => {
+      const text = await fetchTextOptional(
+        `${WORKER_BASE_URL}/flare-events/${dateKey}events.txt`
+      );
+      if (!text) {
+        return [];
+      }
+      const fileDate = `${dateKey.slice(0, 4)}-${dateKey.slice(4, 6)}-${dateKey.slice(6, 8)}`;
+      return parseFlareEvents(text, fileDate);
+    })
+  );
+
+  const cutoff = Date.now() - 72 * 60 * 60 * 1000;
+  return results
+    .flat()
+    .filter(event => event.timestamp.valueOf() >= cutoff)
+    .sort((a, b) => b.timestamp - a.timestamp);
 }
 
 export async function fetchActiveRegions(startTime, endTime) {

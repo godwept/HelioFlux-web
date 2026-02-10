@@ -73,7 +73,8 @@ export default {
       }
       // NOAA flare events text files
       else if (path.startsWith('/api/flare-events/')) {
-        const date = path.split('/').pop().replace('.txt', '');
+        const raw = path.split('/').pop().replace('.txt', '');
+        const date = raw.replace('events', '');
         // Try HTTPS first, fallback handled by error catching
         targetUrl = `https://services.swpc.noaa.gov/text/${date}events.txt`;
       }
@@ -109,12 +110,22 @@ export default {
         method: request.method,
         headers: isHekRequest
           ? {
-              'User-Agent': 'Mozilla/5.0 (HelioFlux)',Ple
+              'User-Agent': 'Mozilla/5.0 (HelioFlux)',
               'Accept': 'application/json,text/plain,*/*',
             }
           : request.headers,
         body: request.body,
       });
+
+      if (path.startsWith('/api/flare-events/') && apiResponse.status === 404) {
+        return new Response('', {
+          status: 204,
+          headers: {
+            ...corsHeaders,
+            'Cache-Control': 'public, max-age=300',
+          },
+        });
+      }
 
       // Clone response and add CORS headers
       const response = new Response(apiResponse.body, apiResponse);

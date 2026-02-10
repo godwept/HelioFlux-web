@@ -4,6 +4,7 @@ import {
   fetchEnlilFrames,
   fetchFlareProbabilities,
   fetchLastModified,
+  fetchRecentFlares,
   fetchXrayFlux,
   LASCO_C2_GIF_URL,
   LASCO_C3_GIF_URL,
@@ -151,6 +152,9 @@ const SolarActivity = () => {
   const [xrayData, setXrayData] = useState([]);
   const [xrayLoading, setXrayLoading] = useState(true);
   const [xrayError, setXrayError] = useState(null);
+  const [flareEvents, setFlareEvents] = useState([]);
+  const [flareLoading, setFlareLoading] = useState(true);
+  const [flareError, setFlareError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imageryLoading, setImageryLoading] = useState(true);
@@ -178,6 +182,34 @@ const SolarActivity = () => {
     };
 
     loadProbabilities();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFlares = async () => {
+      try {
+        setFlareError(null);
+        const events = await fetchRecentFlares();
+        if (isMounted) {
+          setFlareEvents(events);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setFlareError(err.message ?? 'Unable to load recent flares.');
+        }
+      } finally {
+        if (isMounted) {
+          setFlareLoading(false);
+        }
+      }
+    };
+
+    loadFlares();
 
     return () => {
       isMounted = false;
@@ -445,6 +477,16 @@ const SolarActivity = () => {
     });
   };
 
+  const formatEventTime = timestamp =>
+    timestamp.toLocaleString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'UTC',
+    });
+
   return (
     <section className="solar-activity">
       <header className="solar-activity__header">
@@ -641,7 +683,43 @@ const SolarActivity = () => {
           </div>
         )}
       </div>
-      <div className="panel solar-activity__placeholder">Recent flares loading.</div>
+      <div className="solar-activity__section">
+        <h3 className="solar-activity__section-title">Recent Flares</h3>
+        {flareLoading ? (
+          <div className="panel solar-activity__placeholder">Loading recent flares...</div>
+        ) : flareError ? (
+          <div className="panel solar-activity__placeholder">{flareError}</div>
+        ) : flareEvents.length ? (
+          <div className="panel solar-activity__flare-panel">
+            <ul className="solar-activity__flare-list">
+              {flareEvents.map(event => (
+                <li key={`${event.id}-${event.timestamp.toISOString()}`} className="solar-activity__flare-item">
+                  <div className="solar-activity__flare-main">
+                    <span
+                      className={
+                        event.class?.startsWith('X')
+                          ? 'solar-activity__flare-class solar-activity__flare-class--x'
+                          : 'solar-activity__flare-class solar-activity__flare-class--m'
+                      }
+                    >
+                      {event.class}
+                    </span>
+                    <span className="solar-activity__flare-time">
+                      {formatEventTime(event.timestamp)} UTC
+                    </span>
+                  </div>
+                  <div className="solar-activity__flare-meta">
+                    <span>{event.observatory}</span>
+                    {event.region ? <span>AR {event.region}</span> : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="panel solar-activity__placeholder">No M/X flares in the last 72 hours.</div>
+        )}
+      </div>
       <div className="panel solar-activity__placeholder">Particle environment loading.</div>
     </section>
   );
