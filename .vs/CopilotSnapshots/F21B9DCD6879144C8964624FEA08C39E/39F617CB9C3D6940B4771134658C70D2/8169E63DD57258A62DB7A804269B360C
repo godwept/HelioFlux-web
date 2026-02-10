@@ -8,11 +8,19 @@ function App() {
       <header className="app-header">
         <div>
           <h1 className="app-title">HELIOFLUX</h1>
+          <p className="subtitle">
+            Real-time solar imagery, space weather, and activity alerts in one
+            mobile-first experience.
+          </p>
         </div>
       </header>
 
       <main className="app-main">
         <section className="hero-section">
+          <div className="hero-section__header">
+            <h2>Solar Imagery</h2>
+            <span className="status-badge">Live</span>
+          </div>
           <SolarHero />
         </section>
 
