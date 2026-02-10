@@ -7,7 +7,7 @@
 .carousel__header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--space-md);
   padding: 0 var(--space-xs);
 }
@@ -16,8 +16,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-sm);
-  justify-content: center;
-  width: 100%;
 }
 
 .carousel__metric {
@@ -53,10 +51,9 @@
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding: var(--space-sm) var(--space-xs) var(--space-lg);
-  margin: 0;
+  margin: 0 calc(var(--space-md) * -1);
   padding-left: var(--space-md);
   padding-right: var(--space-md);
-  scroll-padding-left: var(--space-md);
 }
 
 .carousel__track::-webkit-scrollbar {
@@ -64,8 +61,8 @@
 }
 
 .carousel__card {
-  flex: 0 0 70%;
-  min-width: 70%;
+  flex: 0 0 calc(50% - var(--space-sm));
+  min-width: calc(50% - var(--space-sm));
   background: var(--bg-secondary);
   border-radius: 12px;
   padding: var(--space-md);
@@ -74,7 +71,7 @@
   gap: var(--space-sm);
   scroll-snap-align: start;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  min-height: 190px;
+  min-height: 140px;
 }
 
 .carousel__card-header {
