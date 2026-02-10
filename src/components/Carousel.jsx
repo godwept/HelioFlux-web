@@ -11,9 +11,9 @@ function getKpLabel(kp) {
 }
 
 function getFlareLabel(probs) {
-  if (probs.x > 25) return 'High';
-  if (probs.m > 25) return 'Moderate';
-  if (probs.c > 50) return 'Active';
+  if (probs.x >= 25) return 'High';
+  if (probs.m >= 25) return 'Moderate';
+  if (probs.c >= 50) return 'Active';
   return 'Low';
 }
 
