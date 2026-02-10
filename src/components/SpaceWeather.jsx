@@ -47,7 +47,7 @@ const kpColor = kp => {
 };
 
 const SpaceWeather = () => {
-  const [timeframe, setTimeframe] = useState(TIMEFRAMES[0]);
+  const [timeframe, setTimeframe] = useState(TIMEFRAMES[1]);
   const [magneticData, setMagneticData] = useState([]);
   const [plasmaData, setPlasmaData] = useState([]);
   const [kpData, setKpData] = useState([]);

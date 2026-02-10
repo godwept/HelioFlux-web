@@ -1,11 +1,18 @@
-﻿import { useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import './App.css'
 import SolarHero from './components/SolarHero'
 import Carousel from './components/Carousel'
 import SpaceWeather from './components/SpaceWeather'
 
 function App() {
-  const [activeTab, setActiveTab] = useState('home')
+  const [activeTab, setActiveTab] = useState(() => {
+    const storedTab = sessionStorage.getItem('helioflux-active-tab')
+    return storedTab ?? 'home'
+  })
+
+  useEffect(() => {
+    sessionStorage.setItem('helioflux-active-tab', activeTab)
+  }, [activeTab])
 
   return (
     <div className="app">

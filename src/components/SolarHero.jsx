@@ -15,6 +15,8 @@ const SolarHero = () => {
 
   // Target ~5 FPS (200ms per frame)
   const FRAME_DELAY = 200;
+  const CACHE_KEY = 'helioflux-solar-frames';
+  const CACHE_TTL = 30 * 60 * 1000;
 
   useEffect(() => {
     let mounted = true;
@@ -23,15 +25,39 @@ const SolarHero = () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const urls = await fetchSolarFrames();
+        const now = Date.now();
+        let urls = [];
+
+        try {
+          const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+          if (cached.timestamp && Array.isArray(cached.urls)) {
+            const age = now - cached.timestamp;
+            if (age < CACHE_TTL) {
+              urls = cached.urls;
+            }
+          }
+        } catch (cacheError) {
+          console.warn('SolarHero cache read failed:', cacheError);
+        }
+
+        if (!urls.length) {
+          urls = await fetchSolarFrames();
+          try {
+            localStorage.setItem(
+              CACHE_KEY,
+              JSON.stringify({ timestamp: now, urls })
+            );
+          } catch (cacheError) {
+            console.warn('SolarHero cache write failed:', cacheError);
+          }
+        }
         
         if (!mounted) return;
         
         // Preload all images
         const images = await Promise.all(
           urls.map(url => {
-            return new Promise((resolve) => {
+            return new Promise(resolve => {
               const img = new Image();
               img.crossOrigin = 'anonymous';
               img.onload = () => resolve(img);
