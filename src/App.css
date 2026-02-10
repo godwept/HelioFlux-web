@@ -14,33 +14,6 @@
   min-height: 100vh;
 }
 
-.app-header {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  text-align: center;
-}
-
-.app-title {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 2.5rem;
-  font-weight: 900;
-  letter-spacing: 0.15em;
-  color: var(--text-primary);
-  margin: 0;
-  background: linear-gradient(135deg, var(--solar-primary) 0%, #ffd580 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-shadow: 0 0 30px rgba(255, 149, 0, 0.3);
-}
-
-.subtitle {
-  margin: var(--space-sm) 0 0;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.6;
-}
 
 .app-main {
   display: flex;

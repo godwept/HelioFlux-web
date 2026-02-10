@@ -9,12 +9,6 @@ function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <div>
-          <h1 className="app-title">HELIOFLUX</h1>
-        </div>
-      </header>
-
       <main className="app-main">
         {activeTab === 'home' && (
           <>
