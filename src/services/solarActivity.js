@@ -12,14 +12,15 @@
 
 const NOAA_PROXY_BASE_URL =
   'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/noaa';
+const WORKER_BASE_URL =
+  'https://helioflux-api-proxy.mathew-stewart.workers.dev/api';
 
-export const MAGNETOGRAM_URL =
-  'https://sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_HMIB.jpg';
+export const MAGNETOGRAM_URL = `${WORKER_BASE_URL}/hmi/`;
 export const LASCO_C2_GIF_URL =
-  'https://soho.nascom.nasa.gov/data/LATEST/current_c2.gif';
+  `${WORKER_BASE_URL}/lasco/LATEST/current_c2.gif`;
 export const LASCO_C3_GIF_URL =
-  'https://soho.nascom.nasa.gov/data/LATEST/current_c3.gif';
-const HEK_BASE_URL = 'https://www.lmsal.com/hek/her';
+  `${WORKER_BASE_URL}/lasco/LATEST/current_c3.gif`;
+const HEK_BASE_URL = `${WORKER_BASE_URL}/hek/`;
 
 async function fetchText(url) {
   const response = await fetch(url);
@@ -148,9 +149,7 @@ export async function fetchLastModified(url) {
 }
 
 export async function fetchEnlilFrames() {
-  const listing = await fetchText(
-    `${NOAA_PROXY_BASE_URL}/images/animations/enlil/`
-  );
+  const listing = await fetchText(`${WORKER_BASE_URL}/enlil/`);
 
   const matches = [...listing.matchAll(/href="([^"]+?\.(?:jpg|png))"/gi)];
   const files = matches.map(match => match[1]);
@@ -179,9 +178,7 @@ export async function fetchEnlilFrames() {
   const downsampled = frames.filter((_, index) => index % downsampleStep === 0);
 
   return {
-    frames: downsampled.map(
-      frame => `${NOAA_PROXY_BASE_URL}/images/animations/enlil/${frame}`
-    ),
+    frames: downsampled.map(frame => `${WORKER_BASE_URL}/enlil/${frame}`),
     timestamp: parseTimestamp(latestRunKey),
   };
 }

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cloudflare Worker - API Proxy for HelioFlux
  * 
  * This Worker handles CORS and proxies requests to various space weather APIs.
@@ -89,6 +89,10 @@ export default {
       // ENLIL solar wind model
       else if (path.startsWith('/api/enlil/')) {
         targetUrl = 'https://services.swpc.noaa.gov/images/animations/enlil/';
+      }
+      // HEK active region data
+      else if (path.startsWith('/api/hek/')) {
+        targetUrl = 'https://www.lmsal.com/hek/her' + url.search;
       }
       else {
         return new Response('Not found', { 
