@@ -30,6 +30,40 @@ async function fetchText(url) {
   return response.text();
 }
 
+const parseAceEpamValue = value => {
+  const parsed = Number.parseFloat(value);
+  if (!Number.isFinite(parsed) || parsed <= -1.0e5) {
+    return null;
+  }
+  return parsed;
+};
+
+const parseAceEpam = text => {
+  const lines = text.split(/\r?\n/);
+  return lines
+    .filter(line => line.trim() && !line.startsWith('#'))
+    .map(line => line.trim().split(/\s+/))
+    .filter(parts => parts.length >= 16)
+    .map(parts => {
+      const [year, month, day, time] = parts;
+      const hours = time.padStart(4, '0').slice(0, 2);
+      const minutes = time.padStart(4, '0').slice(2, 4);
+      const timestamp = new Date(
+        `${year}-${month}-${day}T${hours}:${minutes}:00Z`
+      );
+
+      return {
+        timestamp,
+        electronLow: parseAceEpamValue(parts[7]),
+        electronHigh: parseAceEpamValue(parts[8]),
+        protonLow: parseAceEpamValue(parts[10]),
+        protonMid: parseAceEpamValue(parts[11]),
+        protonHigh: parseAceEpamValue(parts[12]),
+      };
+    })
+    .filter(entry => !Number.isNaN(entry.timestamp.valueOf()));
+};
+
 async function fetchTextOptional(url) {
   const response = await fetch(url);
   if (response.status === 204 || response.status === 404) {
@@ -253,6 +287,36 @@ export async function fetchRecentFlares() {
   return events
     .filter(event => event.timestamp.valueOf() >= cutoff)
     .sort((a, b) => b.timestamp - a.timestamp);
+}
+
+const formatAceEpamMonth = date =>
+  `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+
+export async function fetchAceEpam() {
+  const now = new Date();
+  const currentMonth = formatAceEpamMonth(now);
+  const previousMonthDate = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)
+  );
+  const previousMonth = formatAceEpamMonth(previousMonthDate);
+  const monthKeys = [currentMonth, previousMonth].filter(
+    (value, index, array) => array.indexOf(value) === index
+  );
+
+  const responses = await Promise.all(
+    monthKeys.map(key =>
+      fetchTextOptional(`${WORKER_BASE_URL}/ace-epam/${key}_ace_epam_1h.txt`)
+    )
+  );
+
+  const entries = responses
+    .map(text => (text ? parseAceEpam(text) : []))
+    .flat();
+
+  const cutoff = Date.now() - 72 * 60 * 60 * 1000;
+  return entries
+    .filter(entry => entry.timestamp.valueOf() >= cutoff)
+    .sort((a, b) => a.timestamp - b.timestamp);
 }
 
 export async function fetchActiveRegions(startTime, endTime) {

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchActiveRegions,
+  fetchAceEpam,
   fetchEnlilFrames,
   fetchFlareProbabilities,
   fetchLastModified,
@@ -155,6 +156,9 @@ const SolarActivity = () => {
   const [flareEvents, setFlareEvents] = useState([]);
   const [flareLoading, setFlareLoading] = useState(true);
   const [flareError, setFlareError] = useState(null);
+  const [epamData, setEpamData] = useState([]);
+  const [epamLoading, setEpamLoading] = useState(true);
+  const [epamError, setEpamError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imageryLoading, setImageryLoading] = useState(true);
@@ -182,6 +186,34 @@ const SolarActivity = () => {
     };
 
     loadProbabilities();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadEpam = async () => {
+      try {
+        setEpamError(null);
+        const data = await fetchAceEpam();
+        if (isMounted) {
+          setEpamData(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setEpamError(err.message ?? 'Unable to load particle data.');
+        }
+      } finally {
+        if (isMounted) {
+          setEpamLoading(false);
+        }
+      }
+    };
+
+    loadEpam();
 
     return () => {
       isMounted = false;
@@ -725,7 +757,32 @@ const SolarActivity = () => {
           <div className="panel solar-activity__placeholder">No M/X flares in the last 72 hours.</div>
         )}
       </div>
-      <div className="panel solar-activity__placeholder">Particle environment loading.</div>
+      <div className="solar-activity__section">
+        <h3 className="solar-activity__section-title">Particle Environment</h3>
+        {epamLoading ? (
+          <div className="panel solar-activity__placeholder">Loading ACE EPAM data...</div>
+        ) : epamError ? (
+          <div className="panel solar-activity__placeholder">{epamError}</div>
+        ) : epamData.length ? (
+          <div className="panel chart-card">
+            <div className="chart-card__header">
+              <h3>ACE EPAM (72 Hour)</h3>
+              <span>Particles</span>
+            </div>
+            <LineChart
+              data={epamData}
+              yTickFormatter={value => value.toExponential(0)}
+              series={[
+                { key: 'electronLow', color: '#5ac8fa', label: 'Electron 38-53 keV' },
+                { key: 'protonLow', color: '#ff9f0a', label: 'Proton 47-68 keV' },
+                { key: 'protonMid', color: '#ff375f', label: 'Proton 115-195 keV' },
+              ]}
+            />
+          </div>
+        ) : (
+          <div className="panel solar-activity__placeholder">No ACE EPAM data available.</div>
+        )}
+      </div>
     </section>
   );
 };
