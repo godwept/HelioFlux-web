@@ -15,6 +15,30 @@
   font-weight: 600;
 }
 
+.solar-activity__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm);
+}
+
+.solar-activity__status {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.metric-badge--flare-c {
+  color: #ffd60a;
+}
+
+.metric-badge--flare-m {
+  color: #ff9f0a;
+}
+
+.metric-badge--flare-x {
+  color: #ff3b30;
+}
+
 .solar-activity__placeholder {
   color: var(--text-tertiary);
   text-align: center;
