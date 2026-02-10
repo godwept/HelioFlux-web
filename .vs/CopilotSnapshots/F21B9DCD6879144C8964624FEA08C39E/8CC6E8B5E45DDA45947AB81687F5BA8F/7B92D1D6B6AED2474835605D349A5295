@@ -126,18 +126,13 @@ const SolarHero = () => {
       const size = canvas.offsetWidth;
       if (!size) return;
 
-      const devicePixelRatio = window.devicePixelRatio || 1;
-      const firstImage = imagesRef.current[0];
-      const maxDpr = firstImage ? firstImage.naturalWidth / size : devicePixelRatio;
-      const dpr = Math.min(devicePixelRatio, maxDpr || devicePixelRatio);
-
+      const dpr = window.devicePixelRatio || 1;
       canvas.width = Math.round(size * dpr);
       canvas.height = Math.round(size * dpr);
       canvas.style.width = `${size}px`;
       canvas.style.height = `${size}px`;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
     };
 
     setupCanvas();
