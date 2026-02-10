@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchActiveRegions,
   fetchEnlilFrames,
@@ -12,19 +12,142 @@ import {
 import LineChart from './LineChart';
 import './SolarActivity.css';
 
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+const distanceBetween = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+
+const usePinchZoom = () => {
+  const ref = useRef(null);
+  const pointers = useRef(new Map());
+  const startDistance = useRef(0);
+  const startScale = useRef(1);
+  const panStart = useRef({ x: 0, y: 0, pointerX: 0, pointerY: 0 });
+  const [transform, setTransform] = useState({ scale: 1, x: 0, y: 0 });
+
+  const clampTranslate = (x, y, scale) => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (!rect) {
+      return { x, y };
+    }
+    const maxX = ((scale - 1) * rect.width) / 2;
+    const maxY = ((scale - 1) * rect.height) / 2;
+    return {
+      x: clamp(x, -maxX, maxX),
+      y: clamp(y, -maxY, maxY),
+    };
+  };
+
+  const onPointerDown = event => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pointers.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    if (pointers.current.size === 1) {
+      panStart.current = {
+        x: transform.x,
+        y: transform.y,
+        pointerX: event.clientX,
+        pointerY: event.clientY,
+      };
+    }
+
+    if (pointers.current.size === 2) {
+      const [first, second] = [...pointers.current.values()];
+      startDistance.current = distanceBetween(first, second);
+      startScale.current = transform.scale;
+    }
+  };
+
+  const onPointerMove = event => {
+    if (!pointers.current.has(event.pointerId)) {
+      return;
+    }
+
+    pointers.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    if (pointers.current.size === 2) {
+      const [first, second] = [...pointers.current.values()];
+      const distance = distanceBetween(first, second);
+      if (startDistance.current > 0) {
+        const nextScale = clamp(
+          startScale.current * (distance / startDistance.current),
+          1,
+          3
+        );
+        setTransform(prev => {
+          const clamped = clampTranslate(prev.x, prev.y, nextScale);
+          return { ...prev, scale: nextScale, ...clamped };
+        });
+      }
+      return;
+    }
+
+    if (pointers.current.size === 1 && transform.scale > 1) {
+      const deltaX = event.clientX - panStart.current.pointerX;
+      const deltaY = event.clientY - panStart.current.pointerY;
+      const nextX = panStart.current.x + deltaX;
+      const nextY = panStart.current.y + deltaY;
+      setTransform(prev => ({
+        ...prev,
+        ...clampTranslate(nextX, nextY, prev.scale),
+      }));
+    }
+  };
+
+  const resetPointers = event => {
+    if (pointers.current.has(event.pointerId)) {
+      pointers.current.delete(event.pointerId);
+    }
+    if (pointers.current.size < 2) {
+      startDistance.current = 0;
+    }
+  };
+
+  const resetZoom = () => {
+    setTransform({ scale: 1, x: 0, y: 0 });
+  };
+
+  return {
+    ref,
+    onPointerDown,
+    onPointerMove,
+    onPointerUp: resetPointers,
+    onPointerCancel: resetPointers,
+    onPointerLeave: resetPointers,
+    onDoubleClick: resetZoom,
+    touchAction: transform.scale > 1 ? 'none' : 'pan-x',
+    style: {
+      transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
+    },
+  };
+};
+
 const SolarActivity = () => {
   const [flareProbabilities, setFlareProbabilities] = useState({
     c: 0,
     m: 0,
     x: 0,
   });
+  const magnetogramZoom = usePinchZoom();
+  const lascoC2Zoom = usePinchZoom();
+  const lascoC3Zoom = usePinchZoom();
+  const enlilZoom = usePinchZoom();
   const [imagery, setImagery] = useState({
     magnetogram: { url: MAGNETOGRAM_URL, timestamp: null, regions: [] },
     lascoC2: { url: LASCO_C2_GIF_URL, timestamp: null },
     lascoC3: { url: LASCO_C3_GIF_URL, timestamp: null },
     enlil: { frames: [], timestamp: null },
   });
-  const [enlilFrameIndex, setEnlilFrameIndex] = useState(0);
+  const enlilCanvasRef = useRef(null);
+  const enlilImagesRef = useRef([]);
+  const enlilAnimationRef = useRef(null);
+  const enlilFrameRef = useRef(0);
+  const enlilLastFrameTimeRef = useRef(0);
+  const [enlilLoading, setEnlilLoading] = useState(true);
   const [xrayData, setXrayData] = useState([]);
   const [xrayLoading, setXrayLoading] = useState(true);
   const [xrayError, setXrayError] = useState(null);
@@ -146,18 +269,152 @@ const SolarActivity = () => {
   }, []);
 
   useEffect(() => {
-    if (!imagery.enlil.frames.length) {
+    let isMounted = true;
+    const frames = imagery.enlil.frames;
+
+    if (!frames.length) {
+      enlilImagesRef.current = [];
+      setEnlilLoading(false);
       return undefined;
     }
 
-    const interval = setInterval(() => {
-      setEnlilFrameIndex(index => (index + 1) % imagery.enlil.frames.length);
-    }, 200);
+    const loadFrames = async () => {
+      setEnlilLoading(true);
+      const images = await Promise.all(
+        frames.map(url =>
+          new Promise(resolve => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => resolve(null);
+            img.src = url;
+          })
+        )
+      );
 
-    return () => clearInterval(interval);
-  }, [imagery.enlil.frames.length]);
+      if (!isMounted) {
+        return;
+      }
 
-  const enlilFrame = imagery.enlil.frames[enlilFrameIndex];
+      enlilImagesRef.current = images.filter(Boolean);
+      enlilFrameRef.current = 0;
+      enlilLastFrameTimeRef.current = 0;
+      setEnlilLoading(false);
+    };
+
+    loadFrames();
+
+    return () => {
+      isMounted = false;
+      if (enlilAnimationRef.current) {
+        cancelAnimationFrame(enlilAnimationRef.current);
+      }
+    };
+  }, [imagery.enlil.frames]);
+
+  useEffect(() => {
+    if (!enlilImagesRef.current.length) {
+      return undefined;
+    }
+
+    const canvas = enlilCanvasRef.current;
+    if (!canvas) {
+      return undefined;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    const setupCanvas = () => {
+      const size = canvas.offsetWidth;
+      if (!size) {
+        return;
+      }
+      const devicePixelRatio = window.devicePixelRatio || 1;
+      const firstImage = enlilImagesRef.current[0];
+      const maxDpr = firstImage ? firstImage.naturalWidth / size : devicePixelRatio;
+      const dpr = Math.min(devicePixelRatio, maxDpr || devicePixelRatio);
+
+      canvas.width = Math.round(size * dpr);
+      canvas.height = Math.round(size * dpr);
+      canvas.style.width = `${size}px`;
+      canvas.style.height = `${size}px`;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    };
+
+    setupCanvas();
+    startEnlilAnimation();
+
+    window.addEventListener('resize', setupCanvas);
+    return () => window.removeEventListener('resize', setupCanvas);
+  }, [enlilLoading]);
+
+  const startEnlilAnimation = () => {
+    const canvas = enlilCanvasRef.current;
+    if (!canvas || !enlilImagesRef.current.length) {
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const frameDelay = 200;
+
+    const drawContain = image => {
+      if (!image) {
+        return;
+      }
+      const size = canvas.offsetWidth;
+      if (!size) {
+        return;
+      }
+      const scale = Math.min(size / image.naturalWidth, size / image.naturalHeight);
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      const offsetX = (size - drawWidth) / 2;
+      const offsetY = (size - drawHeight) / 2;
+      ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+    };
+
+    const drawFrame = timestamp => {
+      const size = canvas.offsetWidth;
+      if (!size) {
+        return;
+      }
+
+      if (!enlilLastFrameTimeRef.current) {
+        enlilLastFrameTimeRef.current = timestamp;
+      }
+
+      const elapsed = timestamp - enlilLastFrameTimeRef.current;
+      const progress = Math.min(elapsed / frameDelay, 1);
+      const currentIndex = enlilFrameRef.current;
+      const nextIndex = (currentIndex + 1) % enlilImagesRef.current.length;
+      const currentImage = enlilImagesRef.current[currentIndex];
+      const nextImage = enlilImagesRef.current[nextIndex];
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.globalAlpha = 1;
+      drawContain(currentImage);
+
+      if (nextImage) {
+        ctx.globalAlpha = progress;
+        drawContain(nextImage);
+        ctx.globalAlpha = 1;
+      }
+
+      if (elapsed >= frameDelay) {
+        enlilLastFrameTimeRef.current = timestamp;
+        enlilFrameRef.current = nextIndex;
+      }
+
+      enlilAnimationRef.current = requestAnimationFrame(drawFrame);
+    };
+
+    if (enlilAnimationRef.current) {
+      cancelAnimationFrame(enlilAnimationRef.current);
+    }
+    enlilAnimationRef.current = requestAnimationFrame(drawFrame);
+  };
 
   const regionMarkers = useMemo(
     () =>
@@ -228,17 +485,29 @@ const SolarActivity = () => {
                   <h4>HMI Magnetogram</h4>
                   <span className="solar-activity__source">SDO</span>
                 </div>
-                <div className="solar-activity__image-frame">
-                  <img src={imagery.magnetogram.url} alt="HMI magnetogram" />
-                  {regionMarkers.map(marker => (
-                    <span
-                      key={marker.id}
-                      className="solar-activity__region"
-                      style={{ left: marker.left, top: marker.top }}
-                    >
-                      {marker.number}
-                    </span>
-                  ))}
+                <div
+                  className="solar-activity__image-frame solar-activity__image-frame--zoomable"
+                  ref={magnetogramZoom.ref}
+                  onPointerDown={magnetogramZoom.onPointerDown}
+                  onPointerMove={magnetogramZoom.onPointerMove}
+                  onPointerUp={magnetogramZoom.onPointerUp}
+                  onPointerCancel={magnetogramZoom.onPointerCancel}
+                  onPointerLeave={magnetogramZoom.onPointerLeave}
+                  onDoubleClick={magnetogramZoom.onDoubleClick}
+                  style={{ touchAction: magnetogramZoom.touchAction }}
+                >
+                  <div className="solar-activity__zoom" style={magnetogramZoom.style}>
+                    <img src={imagery.magnetogram.url} alt="HMI magnetogram" />
+                    {regionMarkers.map(marker => (
+                      <span
+                        key={marker.id}
+                        className="solar-activity__region"
+                        style={{ left: marker.left, top: marker.top }}
+                      >
+                        {marker.number}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 {imagery.magnetogram.timestamp ? (
                   <span className="solar-activity__caption">
@@ -252,8 +521,20 @@ const SolarActivity = () => {
                   <h4>LASCO C2</h4>
                   <span className="solar-activity__source">SOHO</span>
                 </div>
-                <div className="solar-activity__image-frame">
-                  <img src={imagery.lascoC2.url} alt="LASCO C2 coronagraph" />
+                <div
+                  className="solar-activity__image-frame solar-activity__image-frame--zoomable"
+                  ref={lascoC2Zoom.ref}
+                  onPointerDown={lascoC2Zoom.onPointerDown}
+                  onPointerMove={lascoC2Zoom.onPointerMove}
+                  onPointerUp={lascoC2Zoom.onPointerUp}
+                  onPointerCancel={lascoC2Zoom.onPointerCancel}
+                  onPointerLeave={lascoC2Zoom.onPointerLeave}
+                  onDoubleClick={lascoC2Zoom.onDoubleClick}
+                  style={{ touchAction: lascoC2Zoom.touchAction }}
+                >
+                  <div className="solar-activity__zoom" style={lascoC2Zoom.style}>
+                    <img src={imagery.lascoC2.url} alt="LASCO C2 coronagraph" />
+                  </div>
                 </div>
                 {imagery.lascoC2.timestamp ? (
                   <span className="solar-activity__caption">
@@ -267,8 +548,20 @@ const SolarActivity = () => {
                   <h4>LASCO C3</h4>
                   <span className="solar-activity__source">SOHO</span>
                 </div>
-                <div className="solar-activity__image-frame">
-                  <img src={imagery.lascoC3.url} alt="LASCO C3 coronagraph" />
+                <div
+                  className="solar-activity__image-frame solar-activity__image-frame--zoomable"
+                  ref={lascoC3Zoom.ref}
+                  onPointerDown={lascoC3Zoom.onPointerDown}
+                  onPointerMove={lascoC3Zoom.onPointerMove}
+                  onPointerUp={lascoC3Zoom.onPointerUp}
+                  onPointerCancel={lascoC3Zoom.onPointerCancel}
+                  onPointerLeave={lascoC3Zoom.onPointerLeave}
+                  onDoubleClick={lascoC3Zoom.onDoubleClick}
+                  style={{ touchAction: lascoC3Zoom.touchAction }}
+                >
+                  <div className="solar-activity__zoom" style={lascoC3Zoom.style}>
+                    <img src={imagery.lascoC3.url} alt="LASCO C3 coronagraph" />
+                  </div>
                 </div>
                 {imagery.lascoC3.timestamp ? (
                   <span className="solar-activity__caption">
@@ -282,19 +575,34 @@ const SolarActivity = () => {
                   <h4>WSA-Enlil</h4>
                   <span className="solar-activity__source">NOAA</span>
                 </div>
-                <div className="solar-activity__image-frame solar-activity__image-frame--contain">
-                  {enlilFrame ? (
-                    <img
-                      key={enlilFrame}
-                      className="solar-activity__image--fade"
-                      src={enlilFrame}
-                      alt="WSA-Enlil solar wind model"
-                    />
-                  ) : (
-                    <div className="solar-activity__image-fallback">
-                      No animation frames
-                    </div>
-                  )}
+                <div
+                  className="solar-activity__image-frame solar-activity__image-frame--contain solar-activity__image-frame--zoomable"
+                  ref={enlilZoom.ref}
+                  onPointerDown={enlilZoom.onPointerDown}
+                  onPointerMove={enlilZoom.onPointerMove}
+                  onPointerUp={enlilZoom.onPointerUp}
+                  onPointerCancel={enlilZoom.onPointerCancel}
+                  onPointerLeave={enlilZoom.onPointerLeave}
+                  onDoubleClick={enlilZoom.onDoubleClick}
+                  style={{ touchAction: enlilZoom.touchAction }}
+                >
+                  <div className="solar-activity__zoom" style={enlilZoom.style}>
+                    {enlilLoading ? (
+                      <div className="solar-activity__image-fallback">
+                        Loading animation...
+                      </div>
+                    ) : enlilImagesRef.current.length ? (
+                      <canvas
+                        ref={enlilCanvasRef}
+                        className="solar-activity__canvas"
+                        aria-label="WSA-Enlil solar wind model"
+                      />
+                    ) : (
+                      <div className="solar-activity__image-fallback">
+                        No animation frames
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {imagery.enlil.timestamp ? (
                   <span className="solar-activity__caption">
