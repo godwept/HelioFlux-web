@@ -96,6 +96,11 @@ export default {
       else if (path.startsWith('/api/hek')) {
         targetUrl = 'https://www.lmsal.com/hek/her' + url.search;
       }
+      // ACE EPAM particle data
+      else if (path.startsWith('/api/ace-epam/')) {
+        const acePath = path.replace('/api/ace-epam/', '');
+        targetUrl = `https://services.swpc.noaa.gov/ftp/lists/ace2/${acePath}`;
+      }
       else {
         return new Response('Not found', { 
           status: 404,
