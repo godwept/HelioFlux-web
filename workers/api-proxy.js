@@ -117,6 +117,16 @@ export default {
         body: request.body,
       });
 
+      if (path.startsWith('/api/flare-events/') && apiResponse.status === 404) {
+        return new Response('', {
+          status: 204,
+          headers: {
+            ...corsHeaders,
+            'Cache-Control': 'public, max-age=300',
+          },
+        });
+      }
+
       // Clone response and add CORS headers
       const response = new Response(apiResponse.body, apiResponse);
       

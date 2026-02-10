@@ -30,6 +30,17 @@ async function fetchText(url) {
   return response.text();
 }
 
+async function fetchTextOptional(url) {
+  const response = await fetch(url);
+  if (response.status === 204 || response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return response.text();
+}
+
 async function fetchJson(url) {
   const response = await fetch(url);
   if (!response.ok) {
@@ -238,9 +249,12 @@ export async function fetchRecentFlares() {
 
   const results = await Promise.all(
     days.map(async dateKey => {
-      const text = await fetchText(
+      const text = await fetchTextOptional(
         `${WORKER_BASE_URL}/flare-events/${dateKey}events.txt`
       );
+      if (!text) {
+        return [];
+      }
       const fileDate = `${dateKey.slice(0, 4)}-${dateKey.slice(4, 6)}-${dateKey.slice(6, 8)}`;
       return parseFlareEvents(text, fileDate);
     })
