@@ -88,7 +88,8 @@ export default {
       }
       // ENLIL solar wind model
       else if (path.startsWith('/api/enlil/')) {
-        targetUrl = 'https://services.swpc.noaa.gov/images/animations/enlil/';
+        const enlilPath = path.replace('/api/enlil/', '');
+        targetUrl = `https://services.swpc.noaa.gov/images/animations/enlil/${enlilPath}`;
       }
       // HEK active region data
       else if (path.startsWith('/api/hek')) {
