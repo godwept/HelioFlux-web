@@ -1,41 +1,13 @@
-﻿import './Chart.css';
-
-const CHART_WIDTH = 300;
-const CHART_HEIGHT = 120;
-const PADDING = 16;
-
-const buildLinePath = (data, minValue, maxValue) => {
-  if (data.length < 2) {
-    return '';
-  }
-
-  const range = maxValue - minValue || 1;
-  return data
-    .map((point, index) => {
-      const x =
-        PADDING + (index / (data.length - 1)) * (CHART_WIDTH - PADDING * 2);
-      const y =
-        CHART_HEIGHT -
-        PADDING -
-        ((point.value - minValue) / range) * (CHART_HEIGHT - PADDING * 2);
-      return `${index === 0 ? 'M' : 'L'}${x} ${y}`;
-    })
-    .join(' ');
-};
-
-const getRange = seriesData => {
-  const values = seriesData.flatMap(series =>
-    series.map(point => point.value)
-  );
-
-  if (!values.length) {
-    return { min: 0, max: 1 };
-  }
-
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  return min === max ? { min: min - 1, max: max + 1 } : { min, max };
-};
+﻿import {
+  CartesianGrid,
+  Line,
+  LineChart as RechartsLineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import './Chart.css';
 
 const formatTimestamp = timestamp => {
   if (!timestamp) {
@@ -52,41 +24,76 @@ const formatTimestamp = timestamp => {
   })}`;
 };
 
+const formatTooltipValue = value =>
+  Number.isFinite(value) ? value.toFixed(1) : '0.0';
+
+const ChartTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) {
+    return null;
+  }
+
+  return (
+    <div className="chart-tooltip">
+      <div className="chart-tooltip__label">{formatTimestamp(label)}</div>
+      {payload.map(entry => (
+        <div key={entry.dataKey} className="chart-tooltip__row">
+          <span className="chart-tooltip__dot" style={{ background: entry.color }} />
+          <span>{entry.name}:</span>
+          <strong>{formatTooltipValue(entry.value)}</strong>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const LineChart = ({ data, series }) => {
-  const mappedSeries = series.map(({ key, color, label }) => ({
-    color,
-    label,
-    points: data.map(entry => ({
-      value: entry[key],
-    })),
-  }));
-
-  const { min, max } = getRange(mappedSeries.map(item => item.points));
-  const lastTimestamp = data.at(-1)?.timestamp;
-
   if (!data.length) {
     return <div className="chart-empty">No data available.</div>;
   }
 
+  const chartData = data.map(entry => ({
+    ...entry,
+    time: entry.timestamp?.valueOf?.() ?? 0,
+  }));
+
   return (
     <div className="chart">
-      <svg
-        className="chart__svg"
-        viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-        role="img"
-      >
-        {mappedSeries.map(seriesItem => (
-          <path
-            key={seriesItem.label}
-            d={buildLinePath(seriesItem.points, min, max)}
-            stroke={seriesItem.color}
-            strokeWidth="2"
-            fill="none"
-          />
-        ))}
-      </svg>
+      <div className="chart__container">
+        <ResponsiveContainer width="100%" height={180}>
+          <RechartsLineChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+            <CartesianGrid stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 3" />
+            <XAxis
+              dataKey="time"
+              type="number"
+              domain={['dataMin', 'dataMax']}
+              tickFormatter={formatTimestamp}
+              tick={{ fill: 'rgba(255, 255, 255, 0.5)', fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fill: 'rgba(255, 255, 255, 0.5)', fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              width={28}
+            />
+            <Tooltip content={<ChartTooltip />} />
+            {series.map(seriesItem => (
+              <Line
+                key={seriesItem.key}
+                type="monotone"
+                dataKey={seriesItem.key}
+                name={seriesItem.label}
+                stroke={seriesItem.color}
+                strokeWidth={2}
+                dot={false}
+              />
+            ))}
+          </RechartsLineChart>
+        </ResponsiveContainer>
+      </div>
       <div className="chart__footer">
-        <span>{formatTimestamp(lastTimestamp)}</span>
+        <span>{formatTimestamp(chartData.at(-1)?.time)}</span>
         <span>Time (UTC)</span>
       </div>
     </div>
