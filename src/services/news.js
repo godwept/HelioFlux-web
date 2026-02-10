@@ -1,4 +1,4 @@
-const WORKER_BASE_URL =
+﻿const WORKER_BASE_URL =
   'https://helioflux-api-proxy.mathew-stewart.workers.dev/api';
 
 export async function fetchNews() {
@@ -11,6 +11,15 @@ export async function fetchNews() {
   const items = doc.querySelectorAll('item');
 
   const articles = [];
+  const getImageFromDescription = description => {
+    if (!description) return '';
+    try {
+      const htmlDoc = new DOMParser().parseFromString(description, 'text/html');
+      return htmlDoc.querySelector('img')?.getAttribute('src') ?? '';
+    } catch {
+      return '';
+    }
+  };
   items.forEach(item => {
     const title = item.querySelector('title')?.textContent ?? '';
     const link = item.querySelector('link')?.textContent ?? '';
@@ -18,6 +27,12 @@ export async function fetchNews() {
     const sourceEl = item.querySelector('source');
     const source = sourceEl?.textContent ?? '';
     const sourceUrl = sourceEl?.getAttribute('url') ?? '';
+    const description = item.querySelector('description')?.textContent ?? '';
+    const imageUrl =
+      item.querySelector('media\\:content')?.getAttribute('url') ??
+      item.querySelector('media\\:thumbnail')?.getAttribute('url') ??
+      item.querySelector('enclosure')?.getAttribute('url') ??
+      getImageFromDescription(description);
 
     if (title && link) {
       articles.push({
@@ -26,6 +41,7 @@ export async function fetchNews() {
         pubDate: pubDate ? new Date(pubDate) : null,
         source,
         sourceUrl,
+        imageUrl,
       });
     }
   });

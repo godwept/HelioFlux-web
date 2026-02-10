@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { fetchKpIndex, fetchMagneticFieldData } from '../services/spaceWeather';
 import { fetchFlareProbabilities } from '../services/solarActivity';
 import { fetchNews } from '../services/news';
@@ -109,10 +109,15 @@ const Carousel = () => {
         {articles.map((article, index) => (
           <a
             key={article.link}
-            className="carousel__card carousel__news-card"
+            className={`carousel__card carousel__news-card${article.imageUrl ? ' has-image' : ''}`}
             href={article.link}
             target="_blank"
             rel="noopener noreferrer"
+            style={
+              article.imageUrl
+                ? { backgroundImage: `url(${article.imageUrl})` }
+                : undefined
+            }
           >
             <h3 className="carousel__news-title">{article.title}</h3>
             <div className="carousel__news-meta">
