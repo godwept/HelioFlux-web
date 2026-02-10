@@ -289,29 +289,9 @@ export async function fetchRecentFlares() {
     .sort((a, b) => b.timestamp - a.timestamp);
 }
 
-const formatAceEpamMonth = date =>
-  `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-
 export async function fetchAceEpam() {
-  const now = new Date();
-  const currentMonth = formatAceEpamMonth(now);
-  const previousMonthDate = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)
-  );
-  const previousMonth = formatAceEpamMonth(previousMonthDate);
-  const monthKeys = [currentMonth, previousMonth].filter(
-    (value, index, array) => array.indexOf(value) === index
-  );
-
-  const responses = await Promise.all(
-    monthKeys.map(key =>
-      fetchTextOptional(`${WORKER_BASE_URL}/ace-epam/${key}_ace_epam_1h.txt`)
-    )
-  );
-
-  const entries = responses
-    .map(text => (text ? parseAceEpam(text) : []))
-    .flat();
+  const text = await fetchText(`${NOAA_PROXY_BASE_URL}/text/ace-epam.txt`);
+  const entries = parseAceEpam(text);
 
   const cutoff = Date.now() - 72 * 60 * 60 * 1000;
   return entries
