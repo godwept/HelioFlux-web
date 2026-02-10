@@ -4,10 +4,12 @@ import {
   fetchEnlilFrames,
   fetchFlareProbabilities,
   fetchLastModified,
+  fetchXrayFlux,
   LASCO_C2_GIF_URL,
   LASCO_C3_GIF_URL,
   MAGNETOGRAM_URL,
 } from '../services/solarActivity';
+import LineChart from './LineChart';
 import './SolarActivity.css';
 
 const SolarActivity = () => {
@@ -23,6 +25,9 @@ const SolarActivity = () => {
     enlil: { frames: [], timestamp: null },
   });
   const [enlilFrameIndex, setEnlilFrameIndex] = useState(0);
+  const [xrayData, setXrayData] = useState([]);
+  const [xrayLoading, setXrayLoading] = useState(true);
+  const [xrayError, setXrayError] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [imageryLoading, setImageryLoading] = useState(true);
@@ -50,6 +55,34 @@ const SolarActivity = () => {
     };
 
     loadProbabilities();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadXray = async () => {
+      try {
+        setXrayError(null);
+        const data = await fetchXrayFlux();
+        if (isMounted) {
+          setXrayData(data);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setXrayError(err.message ?? 'Unable to load X-ray flux.');
+        }
+      } finally {
+        if (isMounted) {
+          setXrayLoading(false);
+        }
+      }
+    };
+
+    loadXray();
 
     return () => {
       isMounted = false;
@@ -119,7 +152,7 @@ const SolarActivity = () => {
 
     const interval = setInterval(() => {
       setEnlilFrameIndex(index => (index + 1) % imagery.enlil.frames.length);
-    }, 250);
+    }, 200);
 
     return () => clearInterval(interval);
   }, [imagery.enlil.frames.length]);
@@ -249,9 +282,14 @@ const SolarActivity = () => {
                   <h4>WSA-Enlil</h4>
                   <span className="solar-activity__source">NOAA</span>
                 </div>
-                <div className="solar-activity__image-frame">
+                <div className="solar-activity__image-frame solar-activity__image-frame--contain">
                   {enlilFrame ? (
-                    <img src={enlilFrame} alt="WSA-Enlil solar wind model" />
+                    <img
+                      key={enlilFrame}
+                      className="solar-activity__image--fade"
+                      src={enlilFrame}
+                      alt="WSA-Enlil solar wind model"
+                    />
                   ) : (
                     <div className="solar-activity__image-fallback">
                       No animation frames
@@ -268,7 +306,33 @@ const SolarActivity = () => {
           </div>
         )}
       </div>
-      <div className="panel solar-activity__placeholder">X-Ray activity loading.</div>
+      <div className="solar-activity__section">
+        <h3 className="solar-activity__section-title">X-Ray Activity</h3>
+        {xrayLoading ? (
+          <div className="panel solar-activity__placeholder">Loading X-ray flux...</div>
+        ) : xrayError ? (
+          <div className="panel solar-activity__placeholder">{xrayError}</div>
+        ) : (
+          <div className="panel chart-card">
+            <div className="chart-card__header">
+              <h3>GOES X-Ray Flux</h3>
+              <span>72 Hour</span>
+            </div>
+            <LineChart
+              data={xrayData}
+              yScale="log"
+              yDomain={[1e-9, 1e-2]}
+              yTickFormatter={value => value.toExponential(0)}
+              series={[
+                { key: 'goes18Short', color: '#5ac8fa', label: 'GOES-18 Short' },
+                { key: 'goes18Long', color: '#34c759', label: 'GOES-18 Long' },
+                { key: 'goes19Short', color: '#ff9f0a', label: 'GOES-19 Short' },
+                { key: 'goes19Long', color: '#ff375f', label: 'GOES-19 Long' },
+              ]}
+            />
+          </div>
+        )}
+      </div>
       <div className="panel solar-activity__placeholder">Recent flares loading.</div>
       <div className="panel solar-activity__placeholder">Particle environment loading.</div>
     </section>
