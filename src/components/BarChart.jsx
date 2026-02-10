@@ -42,6 +42,19 @@ const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
+const shadeColor = (hex, amount) => {
+  const normalized = hex.replace('#', '');
+  if (normalized.length !== 6) {
+    return hex;
+  }
+  const num = parseInt(normalized, 16);
+  const clamp = value => Math.max(0, Math.min(255, value));
+  const r = clamp((num >> 16) + amount);
+  const g = clamp(((num >> 8) & 0x00ff) + amount);
+  const b = clamp((num & 0x0000ff) + amount);
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+};
+
 const BarChart = ({ data, colorForValue, maxValue = 9 }) => {
   if (!data.length) {
     return <div className="chart-empty">No data available.</div>;
@@ -52,11 +65,28 @@ const BarChart = ({ data, colorForValue, maxValue = 9 }) => {
     time: entry.timestamp?.valueOf?.() ?? 0,
   }));
 
+  const gradients = chartData.map((entry, index) => {
+    const baseColor = colorForValue(entry.kp);
+    return {
+      id: `kp-gradient-${index}`,
+      start: shadeColor(baseColor, -35),
+      end: shadeColor(baseColor, 30),
+    };
+  });
+
   return (
     <div className="chart">
       <div className="chart__container">
         <ResponsiveContainer width="100%" height={180}>
           <RechartsBarChart data={chartData} margin={{ top: 10, right: 12, left: 0, bottom: 0 }}>
+            <defs>
+              {gradients.map(gradient => (
+                <linearGradient key={gradient.id} id={gradient.id} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={gradient.end} />
+                  <stop offset="100%" stopColor={gradient.start} />
+                </linearGradient>
+              ))}
+            </defs>
             <CartesianGrid stroke="rgba(255, 255, 255, 0.08)" strokeDasharray="3 3" />
             <XAxis
               dataKey="time"
@@ -76,10 +106,10 @@ const BarChart = ({ data, colorForValue, maxValue = 9 }) => {
             />
             <Tooltip content={<ChartTooltip />} />
             <Bar dataKey="kp" radius={[6, 6, 0, 0]}>
-              {chartData.map(entry => (
+              {chartData.map((entry, index) => (
                 <Cell
                   key={entry.timestamp?.toISOString?.() ?? entry.time}
-                  fill={colorForValue(entry.kp)}
+                  fill={`url(#kp-gradient-${index})`}
                 />
               ))}
             </Bar>

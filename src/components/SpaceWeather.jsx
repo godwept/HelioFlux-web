@@ -88,6 +88,8 @@ const SpaceWeather = () => {
     [plasmaData, timeframe]
   );
 
+  const filteredKp = useMemo(() => filterByWindow(kpData, 48), [kpData]);
+
 
   const currentBz = useMemo(
     () => getLatestValue(magneticData, 'bz'),
@@ -203,7 +205,7 @@ const SpaceWeather = () => {
                 <h3>Planetary Kp Index (3-hour)</h3>
                 <span className="kp-status">{kpStatus(currentKp)}</span>
               </div>
-              <BarChart data={kpData} colorForValue={kpColor} />
+              <BarChart data={filteredKp} colorForValue={kpColor} />
             </div>
           </div>
         </>
