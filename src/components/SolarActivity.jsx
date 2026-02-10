@@ -300,7 +300,6 @@ const SolarActivity = () => {
       enlilFrameRef.current = 0;
       enlilLastFrameTimeRef.current = 0;
       setEnlilLoading(false);
-      startEnlilAnimation();
     };
 
     loadFrames();
@@ -345,6 +344,8 @@ const SolarActivity = () => {
     };
 
     setupCanvas();
+    startEnlilAnimation();
+
     window.addEventListener('resize', setupCanvas);
     return () => window.removeEventListener('resize', setupCanvas);
   }, [enlilLoading]);
