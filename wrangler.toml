@@ -1,6 +1,11 @@
-name = "helioflux-api-proxy"
+﻿name = "helioflux-api-proxy"
 main = "workers/api-proxy.js"
 compatibility_date = "2024-01-01"
+
+[observability]
+  [observability.logs]
+    enabled = true
+    invocation_logs = true
 
 # Optional: Custom domain routing
 # [env.production]
