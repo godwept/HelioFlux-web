@@ -100,6 +100,13 @@ curl "https://your-worker.workers.dev/api/noaa/products/solar-wind/mag-3-day.jso
 
 ## Using with Cloudflare Pages
 
+**Important Note:** The `wrangler.toml` file in this repository is specifically configured for the Cloudflare Worker deployment (API proxy). Do **not** add Pages-specific configuration like `pages_build_output_dir` to this file, as Cloudflare does not allow mixing Worker and Pages configuration in the same wrangler.toml.
+
+To deploy the frontend to Cloudflare Pages:
+1. Deploy the frontend separately via the Cloudflare Pages dashboard
+2. Configure build settings in the Pages dashboard (Build command: `npm run build`, Output directory: `dist`)
+3. Use custom routing to connect Pages with your Worker
+
 If you deploy the frontend to Cloudflare Pages, you can use custom routing to avoid hardcoding the Worker URL:
 
 1. Add routes to `wrangler.toml`:

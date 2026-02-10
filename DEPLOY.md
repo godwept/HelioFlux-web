@@ -91,6 +91,11 @@ const PROXY_BASE_URL = 'https://helioflux-api-proxy.your-account.workers.dev/api
 
 ## Cloudflare Pages Integration
 
+**Important Note:** The `wrangler.toml` file in this project is specifically for deploying the Cloudflare Worker (API proxy). It should **not** include Pages-specific configuration like `pages_build_output_dir`. Cloudflare Pages and Workers are deployed separately:
+
+- **Worker deployment:** Use `npm run worker:deploy` (uses wrangler.toml)
+- **Pages deployment:** Configure directly in the Cloudflare Pages dashboard or use a separate Pages configuration
+
 If you're deploying the frontend to Cloudflare Pages, you can use custom routing to avoid hardcoding URLs:
 
 1. Edit `wrangler.toml` and uncomment the production environment section:
