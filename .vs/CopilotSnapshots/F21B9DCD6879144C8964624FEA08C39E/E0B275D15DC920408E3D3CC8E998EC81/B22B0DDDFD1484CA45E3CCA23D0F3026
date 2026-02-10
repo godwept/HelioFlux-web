@@ -49,7 +49,7 @@ export async function getClosestImage(date, sourceId = AIA_304_SOURCE_ID) {
  * @returns {string} The full URL to download the image
  */
 export function getImageUrl(imageId, width = IMAGE_WIDTH) {
-  return `${PROXY_BASE_URL}/downloadImage/?id=${imageId}&width=${width}&type=png`;
+  return `${PROXY_BASE_URL}/downloadImage/?id=${imageId}&width=${width}&type=jpg`;
 }
 
 /**
