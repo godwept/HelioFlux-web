@@ -12,6 +12,7 @@ function App() {
       <main className="app-main">
         {activeTab === 'home' && (
           <>
+            <header className="home-title">HELIOFLUX</header>
             <section className="hero-section">
               <SolarHero />
             </section>

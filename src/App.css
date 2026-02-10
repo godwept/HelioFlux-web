@@ -28,6 +28,14 @@
   gap: var(--space-sm);
 }
 
+.home-title {
+  font-family: 'Orbitron', system-ui, sans-serif;
+  font-size: 1.4rem;
+  letter-spacing: 0.2em;
+  text-align: center;
+  color: var(--text-primary);
+}
+
 .hero-section__header {
   display: flex;
   align-items: center;
