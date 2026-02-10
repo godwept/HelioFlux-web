@@ -30,14 +30,15 @@
 
 .home-title {
   font-family: 'Orbitron', system-ui, sans-serif;
-  font-size: 1.7rem;
+  font-size: 1.9rem;
+  font-weight: 700;
   letter-spacing: 0.2em;
   text-align: center;
-  background: linear-gradient(90deg, #c46a00, #ff9500);
+  background: linear-gradient(90deg, #a85200, #ff9f2a 45%, #ffb347);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  text-shadow: 0 0 10px rgba(255, 149, 0, 0.35);
+  text-shadow: 0 0 12px rgba(255, 149, 0, 0.55);
 }
 
 .hero-section__header {
