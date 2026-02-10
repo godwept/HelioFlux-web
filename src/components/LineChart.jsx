@@ -3,6 +3,7 @@ import {
   CartesianGrid,
   Line,
   LineChart as RechartsLineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -60,7 +61,14 @@ const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
-const LineChart = ({ data, series, yScale = 'linear', yDomain, yTickFormatter }) => {
+const LineChart = ({
+  data,
+  series,
+  yScale = 'linear',
+  yDomain,
+  yTickFormatter,
+  referenceLines = [],
+}) => {
   if (!data.length) {
     return <div className="chart-empty">No data available.</div>;
   }
@@ -109,6 +117,16 @@ const LineChart = ({ data, series, yScale = 'linear', yDomain, yTickFormatter })
               allowDataOverflow={yScale === 'log'}
             />
             <Tooltip content={<ChartTooltip />} />
+            {referenceLines.map(line => (
+              <ReferenceLine
+                key={line.label}
+                y={line.value}
+                stroke={line.color}
+                strokeDasharray="4 4"
+                strokeWidth={1}
+                label={{ value: line.label, position: 'right', fill: line.color, fontSize: 10 }}
+              />
+            ))}
             {series.map(seriesItem => (
               <Line
                 key={seriesItem.key}

@@ -176,12 +176,20 @@ export async function fetchXrayFlux() {
   return parsed.filter(entry => entry.timestamp.valueOf() >= cutoff);
 }
 
-const parseFlareEvents = (text, fileDate) => {
+const parseFlareEvents = text => {
   const events = [];
   const lines = text.split(/\r?\n/);
+  const dateLine = lines.find(line => line.startsWith(':Product:'));
+  const dateMatch = dateLine?.match(/:Date:\s*(\d{4})\s+(\d{2})\s+(\d{2})/);
+  const fallbackDate = new Date();
+  const fileDate = dateMatch
+    ? `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`
+    : `${fallbackDate.getUTCFullYear()}-${String(fallbackDate.getUTCMonth() + 1).padStart(2, '0')}-${String(
+        fallbackDate.getUTCDate()
+      ).padStart(2, '0')}`;
 
   lines.forEach(line => {
-    if (!line.trim() || line.startsWith('#')) {
+    if (!line.trim() || line.startsWith('#') || line.startsWith(':')) {
       return;
     }
 
@@ -210,15 +218,13 @@ const parseFlareEvents = (text, fileDate) => {
     }
 
     const maxTime = parts[2];
-    if (!maxTime || maxTime.length < 3) {
+    if (!maxTime || maxTime.length < 3 || maxTime.includes('/')) {
       return;
     }
 
     const hours = maxTime.padStart(4, '0').slice(0, 2);
     const minutes = maxTime.padStart(4, '0').slice(2, 4);
-    const timestamp = new Date(
-      `${fileDate}T${hours}:${minutes}:00Z`
-    );
+    const timestamp = new Date(`${fileDate}T${hours}:${minutes}:00Z`);
     if (Number.isNaN(timestamp.valueOf())) {
       return;
     }
@@ -235,34 +241,16 @@ const parseFlareEvents = (text, fileDate) => {
   return events;
 };
 
-const formatEventDate = date =>
-  `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}${String(
-    date.getUTCDate()
-  ).padStart(2, '0')}`;
-
 export async function fetchRecentFlares() {
-  const now = new Date();
-  const days = [0, 1, 2].map(offset => {
-    const date = new Date(now.getTime() - offset * 24 * 60 * 60 * 1000);
-    return formatEventDate(date);
-  });
-
-  const results = await Promise.all(
-    days.map(async dateKey => {
-      const text = await fetchTextOptional(
-        `${WORKER_BASE_URL}/flare-events/${dateKey}events.txt`
-      );
-      if (!text) {
-        return [];
-      }
-      const fileDate = `${dateKey.slice(0, 4)}-${dateKey.slice(4, 6)}-${dateKey.slice(6, 8)}`;
-      return parseFlareEvents(text, fileDate);
-    })
+  const text = await fetchTextOptional(
+    `${NOAA_PROXY_BASE_URL}/text/solar-geophysical-event-reports.txt`
   );
-
+  if (!text) {
+    return [];
+  }
+  const events = parseFlareEvents(text);
   const cutoff = Date.now() - 72 * 60 * 60 * 1000;
-  return results
-    .flat()
+  return events
     .filter(event => event.timestamp.valueOf() >= cutoff)
     .sort((a, b) => b.timestamp - a.timestamp);
 }

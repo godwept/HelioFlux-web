@@ -673,6 +673,11 @@ const SolarActivity = () => {
               yScale="log"
               yDomain={[1e-9, 1e-2]}
               yTickFormatter={value => value.toExponential(0)}
+              referenceLines={[
+                { value: 1e-6, label: 'C', color: '#ffd60a' },
+                { value: 1e-5, label: 'M', color: '#ff9f0a' },
+                { value: 1e-4, label: 'X', color: '#ff3b30' },
+              ]}
               series={[
                 { key: 'goes18Short', color: '#5ac8fa', label: 'GOES-18 Short' },
                 { key: 'goes18Long', color: '#34c759', label: 'GOES-18 Long' },
