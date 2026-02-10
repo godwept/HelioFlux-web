@@ -18,7 +18,7 @@ const PROXY_BASE_URL = 'https://helioflux-api-proxy.mathew-stewart.workers.dev/a
 const AIA_304_SOURCE_ID = 13;
 
 // Image dimensions optimized for mobile
-const IMAGE_WIDTH = 1024;
+const IMAGE_WIDTH = 512;
 
 /**
  * Get the closest image ID for a specific date and source

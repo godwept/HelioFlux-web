@@ -77,54 +77,28 @@ const SolarHero = () => {
     if (!canvas || imagesRef.current.length === 0) return;
 
     const ctx = canvas.getContext('2d');
-
+    
     const drawFrame = () => {
       const img = imagesRef.current[currentFrameRef.current];
-      const size = canvas.offsetWidth;
-
-      if (img && img.complete && size > 0) {
-        ctx.clearRect(0, 0, size, size);
-        ctx.drawImage(img, 0, 0, size, size);
+      
+      if (img && img.complete) {
+        // Set canvas size to match image (or container size)
+        canvas.width = canvas.offsetWidth;
+        canvas.height = canvas.offsetWidth; // Square aspect ratio
+        
+        // Draw image to fill canvas
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       }
-
+      
       // Move to next frame
       currentFrameRef.current = (currentFrameRef.current + 1) % imagesRef.current.length;
-
+      
       // Schedule next frame
       animationRef.current = setTimeout(drawFrame, FRAME_DELAY);
     };
 
     drawFrame();
   };
-
-  useEffect(() => {
-    if (loading || error) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext('2d');
-
-    const setupCanvas = () => {
-      const size = canvas.offsetWidth;
-      if (!size) return;
-
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.round(size * dpr);
-      canvas.height = Math.round(size * dpr);
-      canvas.style.width = `${size}px`;
-      canvas.style.height = `${size}px`;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.imageSmoothingEnabled = true;
-    };
-
-    setupCanvas();
-    window.addEventListener('resize', setupCanvas);
-
-    return () => {
-      window.removeEventListener('resize', setupCanvas);
-    };
-  }, [loading, error]);
 
   // Pause animation when tab is hidden (battery optimization)
   useEffect(() => {
