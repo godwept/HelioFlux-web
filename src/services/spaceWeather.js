@@ -80,3 +80,17 @@ export async function fetchKpIndex() {
   );
   return parseKpIndex(data);
 }
+
+export async function fetchProtonFlux() {
+  const data = await fetchJson(
+    `${NOAA_PROXY_BASE_URL}/json/goes/primary/integral-protons-3-day.json`
+  );
+  return data
+    .filter(entry => entry.energy === '>=10 MeV' && entry.time_tag)
+    .map(entry => ({
+      timestamp: new Date(entry.time_tag),
+      flux: parseFloat(entry.flux) || 0,
+    }))
+    .filter(entry => !Number.isNaN(entry.timestamp.valueOf()))
+    .sort((a, b) => a.timestamp - b.timestamp);
+}
