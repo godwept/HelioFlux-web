@@ -359,6 +359,22 @@ const SolarActivity = () => {
     const ctx = canvas.getContext('2d');
     const frameDelay = 200;
 
+    const drawContain = image => {
+      if (!image) {
+        return;
+      }
+      const size = canvas.offsetWidth;
+      if (!size) {
+        return;
+      }
+      const scale = Math.min(size / image.naturalWidth, size / image.naturalHeight);
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      const offsetX = (size - drawWidth) / 2;
+      const offsetY = (size - drawHeight) / 2;
+      ctx.drawImage(image, offsetX, offsetY, drawWidth, drawHeight);
+    };
+
     const drawFrame = timestamp => {
       const size = canvas.offsetWidth;
       if (!size) {
@@ -378,13 +394,11 @@ const SolarActivity = () => {
 
       ctx.clearRect(0, 0, size, size);
       ctx.globalAlpha = 1;
-      if (currentImage) {
-        ctx.drawImage(currentImage, 0, 0, size, size);
-      }
+      drawContain(currentImage);
 
       if (nextImage) {
         ctx.globalAlpha = progress;
-        ctx.drawImage(nextImage, 0, 0, size, size);
+        drawContain(nextImage);
         ctx.globalAlpha = 1;
       }
 
@@ -466,7 +480,7 @@ const SolarActivity = () => {
         ) : (
           <div className="solar-activity__carousel">
             <div className="solar-activity__carousel-track" role="list">
-              <article className="solar-activity__card" role="listitem">
+              <article className="solar-activity__card solar-activity__card--wide" role="listitem">
                 <div className="solar-activity__card-header">
                   <h4>HMI Magnetogram</h4>
                   <span className="solar-activity__source">SDO</span>
