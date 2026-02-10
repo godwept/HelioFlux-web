@@ -134,6 +134,10 @@
   justify-content: center;
 }
 
+.solar-activity__image-frame--zoomable {
+  touch-action: pan-x;
+}
+
 .solar-activity__image-frame img {
   width: 100%;
   height: 100%;
@@ -142,6 +146,20 @@
 
 .solar-activity__image-frame--contain img {
   object-fit: contain;
+}
+
+.solar-activity__zoom {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-origin: center;
+  will-change: transform;
+}
+
+.solar-activity__canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .solar-activity__image-layer {
