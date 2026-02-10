@@ -1,5 +1,13 @@
-﻿import { useEffect, useState } from 'react';
-import { fetchFlareProbabilities } from '../services/solarActivity';
+﻿import { useEffect, useMemo, useState } from 'react';
+import {
+  fetchActiveRegions,
+  fetchEnlilFrames,
+  fetchFlareProbabilities,
+  fetchLastModified,
+  LASCO_C2_GIF_URL,
+  LASCO_C3_GIF_URL,
+  MAGNETOGRAM_URL,
+} from '../services/solarActivity';
 import './SolarActivity.css';
 
 const SolarActivity = () => {
@@ -8,8 +16,17 @@ const SolarActivity = () => {
     m: 0,
     x: 0,
   });
+  const [imagery, setImagery] = useState({
+    magnetogram: { url: MAGNETOGRAM_URL, timestamp: null, regions: [] },
+    lascoC2: { url: LASCO_C2_GIF_URL, timestamp: null },
+    lascoC3: { url: LASCO_C3_GIF_URL, timestamp: null },
+    enlil: { frames: [], timestamp: null },
+  });
+  const [enlilFrameIndex, setEnlilFrameIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [imageryLoading, setImageryLoading] = useState(true);
+  const [imageryError, setImageryError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -39,6 +56,105 @@ const SolarActivity = () => {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadImagery = async () => {
+      try {
+        setImageryError(null);
+        const now = new Date();
+        const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        const [regions, magnetogramTime, lascoC2Time, lascoC3Time, enlilData] =
+          await Promise.all([
+            fetchActiveRegions(start, now),
+            fetchLastModified(MAGNETOGRAM_URL),
+            fetchLastModified(LASCO_C2_GIF_URL),
+            fetchLastModified(LASCO_C3_GIF_URL),
+            fetchEnlilFrames(),
+          ]);
+
+        if (!isMounted) {
+          return;
+        }
+
+        setImagery({
+          magnetogram: {
+            url: MAGNETOGRAM_URL,
+            timestamp: magnetogramTime,
+            regions,
+          },
+          lascoC2: {
+            url: LASCO_C2_GIF_URL,
+            timestamp: lascoC2Time,
+          },
+          lascoC3: {
+            url: LASCO_C3_GIF_URL,
+            timestamp: lascoC3Time,
+          },
+          enlil: enlilData,
+        });
+      } catch (err) {
+        if (isMounted) {
+          setImageryError(err.message ?? 'Unable to load solar imagery.');
+        }
+      } finally {
+        if (isMounted) {
+          setImageryLoading(false);
+        }
+      }
+    };
+
+    loadImagery();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!imagery.enlil.frames.length) {
+      return undefined;
+    }
+
+    const interval = setInterval(() => {
+      setEnlilFrameIndex(index => (index + 1) % imagery.enlil.frames.length);
+    }, 250);
+
+    return () => clearInterval(interval);
+  }, [imagery.enlil.frames.length]);
+
+  const enlilFrame = imagery.enlil.frames[enlilFrameIndex];
+
+  const regionMarkers = useMemo(
+    () =>
+      imagery.magnetogram.regions.map(region => {
+        const x = 512 + (region.x / 1000) * 512;
+        const y = 512 - (region.y / 1000) * 512;
+        return {
+          id: region.id,
+          number: region.number,
+          left: `${(x / 1024) * 100}%`,
+          top: `${(y / 1024) * 100}%`,
+        };
+      }),
+    [imagery.magnetogram.regions]
+  );
+
+  const formatTimestamp = timestamp => {
+    if (!timestamp) {
+      return null;
+    }
+    return timestamp.toLocaleString('en-US', {
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+      timeZone: 'UTC',
+    });
+  };
+
   return (
     <section className="solar-activity">
       <header className="solar-activity__header">
@@ -65,7 +181,93 @@ const SolarActivity = () => {
         )}
       </div>
 
-      <div className="panel solar-activity__placeholder">Solar imagery loading.</div>
+      <div className="solar-activity__section">
+        <h3 className="solar-activity__section-title">Solar Imagery</h3>
+        {imageryLoading ? (
+          <div className="panel solar-activity__placeholder">Loading solar imagery...</div>
+        ) : imageryError ? (
+          <div className="panel solar-activity__placeholder">{imageryError}</div>
+        ) : (
+          <div className="solar-activity__carousel">
+            <div className="solar-activity__carousel-track" role="list">
+              <article className="solar-activity__card" role="listitem">
+                <div className="solar-activity__card-header">
+                  <h4>HMI Magnetogram</h4>
+                  <span className="solar-activity__source">SDO</span>
+                </div>
+                <div className="solar-activity__image-frame">
+                  <img src={imagery.magnetogram.url} alt="HMI magnetogram" />
+                  {regionMarkers.map(marker => (
+                    <span
+                      key={marker.id}
+                      className="solar-activity__region"
+                      style={{ left: marker.left, top: marker.top }}
+                    >
+                      {marker.number}
+                    </span>
+                  ))}
+                </div>
+                {imagery.magnetogram.timestamp ? (
+                  <span className="solar-activity__caption">
+                    Updated {formatTimestamp(imagery.magnetogram.timestamp)} UTC
+                  </span>
+                ) : null}
+              </article>
+
+              <article className="solar-activity__card" role="listitem">
+                <div className="solar-activity__card-header">
+                  <h4>LASCO C2</h4>
+                  <span className="solar-activity__source">SOHO</span>
+                </div>
+                <div className="solar-activity__image-frame">
+                  <img src={imagery.lascoC2.url} alt="LASCO C2 coronagraph" />
+                </div>
+                {imagery.lascoC2.timestamp ? (
+                  <span className="solar-activity__caption">
+                    Updated {formatTimestamp(imagery.lascoC2.timestamp)} UTC
+                  </span>
+                ) : null}
+              </article>
+
+              <article className="solar-activity__card" role="listitem">
+                <div className="solar-activity__card-header">
+                  <h4>LASCO C3</h4>
+                  <span className="solar-activity__source">SOHO</span>
+                </div>
+                <div className="solar-activity__image-frame">
+                  <img src={imagery.lascoC3.url} alt="LASCO C3 coronagraph" />
+                </div>
+                {imagery.lascoC3.timestamp ? (
+                  <span className="solar-activity__caption">
+                    Updated {formatTimestamp(imagery.lascoC3.timestamp)} UTC
+                  </span>
+                ) : null}
+              </article>
+
+              <article className="solar-activity__card" role="listitem">
+                <div className="solar-activity__card-header">
+                  <h4>WSA-Enlil</h4>
+                  <span className="solar-activity__source">NOAA</span>
+                </div>
+                <div className="solar-activity__image-frame">
+                  {enlilFrame ? (
+                    <img src={enlilFrame} alt="WSA-Enlil solar wind model" />
+                  ) : (
+                    <div className="solar-activity__image-fallback">
+                      No animation frames
+                    </div>
+                  )}
+                </div>
+                {imagery.enlil.timestamp ? (
+                  <span className="solar-activity__caption">
+                    Run {formatTimestamp(imagery.enlil.timestamp)} UTC
+                  </span>
+                ) : null}
+              </article>
+            </div>
+          </div>
+        )}
+      </div>
       <div className="panel solar-activity__placeholder">X-Ray activity loading.</div>
       <div className="panel solar-activity__placeholder">Recent flares loading.</div>
       <div className="panel solar-activity__placeholder">Particle environment loading.</div>
