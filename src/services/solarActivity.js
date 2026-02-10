@@ -20,7 +20,7 @@ export const LASCO_C2_GIF_URL =
   `${WORKER_BASE_URL}/lasco/LATEST/current_c2.gif`;
 export const LASCO_C3_GIF_URL =
   `${WORKER_BASE_URL}/lasco/LATEST/current_c3.gif`;
-const HEK_BASE_URL = `${WORKER_BASE_URL}/hek/`;
+const HEK_BASE_URL = `${WORKER_BASE_URL}/hek`;
 
 async function fetchText(url) {
   const response = await fetch(url);

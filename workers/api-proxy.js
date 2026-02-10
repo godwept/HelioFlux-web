@@ -101,10 +101,17 @@ export default {
         });
       }
 
+      const isHekRequest = path.startsWith('/api/hek');
+
       // Fetch from target API
       const apiResponse = await fetch(targetUrl, {
         method: request.method,
-        headers: request.headers,
+        headers: isHekRequest
+          ? {
+              'User-Agent': 'Mozilla/5.0 (HelioFlux)',
+              'Accept': 'application/json,text/plain,*/*',
+            }
+          : request.headers,
         body: request.body,
       });
 
