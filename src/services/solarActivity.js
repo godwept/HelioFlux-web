@@ -102,6 +102,69 @@ export async function fetchFlareProbabilities() {
   return parseFlareProbabilities(text);
 }
 
+const parseXraySeries = entries => {
+  const byTimestamp = new Map();
+  const normalizeFlux = value => {
+    const flux = Number.parseFloat(value);
+    return Number.isFinite(flux) && flux > 0 ? flux : null;
+  };
+
+  entries.forEach(entry => {
+    if (!entry?.time_tag) {
+      return;
+    }
+    const timestamp = new Date(entry.time_tag);
+    if (Number.isNaN(timestamp.valueOf())) {
+      return;
+    }
+    const key = timestamp.toISOString();
+    if (!byTimestamp.has(key)) {
+      byTimestamp.set(key, {
+        timestamp,
+        goes18Short: null,
+        goes18Long: null,
+        goes19Short: null,
+        goes19Long: null,
+      });
+    }
+
+    const item = byTimestamp.get(key);
+    const energy = entry.energy;
+    const flux = normalizeFlux(entry.flux);
+    if (entry.satellite === 18) {
+      if (energy === '0.05-0.4nm') {
+        item.goes18Short = flux;
+      } else if (energy === '0.1-0.8nm') {
+        item.goes18Long = flux;
+      }
+    }
+
+    if (entry.satellite === 19) {
+      if (energy === '0.05-0.4nm') {
+        item.goes19Short = flux;
+      } else if (energy === '0.1-0.8nm') {
+        item.goes19Long = flux;
+      }
+    }
+  });
+
+  return [...byTimestamp.values()].sort(
+    (a, b) => a.timestamp - b.timestamp
+  );
+};
+
+export async function fetchXrayFlux() {
+  const [primary, secondary] = await Promise.all([
+    fetchJson(`${NOAA_PROXY_BASE_URL}/json/goes/primary/xrays-3-day.json`),
+    fetchJson(`${NOAA_PROXY_BASE_URL}/json/goes/secondary/xrays-3-day.json`),
+  ]);
+
+  const combined = [...primary, ...secondary];
+  const parsed = parseXraySeries(combined);
+  const cutoff = Date.now() - 72 * 60 * 60 * 1000;
+  return parsed.filter(entry => entry.timestamp.valueOf() >= cutoff);
+}
+
 export async function fetchActiveRegions(startTime, endTime) {
   const params = new URLSearchParams({
     cosec: '2',

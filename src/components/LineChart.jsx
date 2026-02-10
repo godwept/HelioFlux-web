@@ -60,7 +60,7 @@ const ChartTooltip = ({ active, payload, label }) => {
   );
 };
 
-const LineChart = ({ data, series }) => {
+const LineChart = ({ data, series, yScale = 'linear', yDomain, yTickFormatter }) => {
   if (!data.length) {
     return <div className="chart-empty">No data available.</div>;
   }
@@ -99,10 +99,14 @@ const LineChart = ({ data, series }) => {
               tickLine={false}
             />
             <YAxis
+              scale={yScale}
+              domain={yDomain ?? ['auto', 'auto']}
+              tickFormatter={yTickFormatter}
               tick={{ fill: 'rgba(255, 255, 255, 0.5)', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              width={28}
+              width={36}
+              allowDataOverflow={yScale === 'log'}
             />
             <Tooltip content={<ChartTooltip />} />
             {series.map(seriesItem => (
