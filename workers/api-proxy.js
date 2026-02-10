@@ -109,7 +109,7 @@ export default {
         method: request.method,
         headers: isHekRequest
           ? {
-              'User-Agent': 'Mozilla/5.0 (HelioFlux)',
+              'User-Agent': 'Mozilla/5.0 (HelioFlux)',Ple
               'Accept': 'application/json,text/plain,*/*',
             }
           : request.headers,
