@@ -1,4 +1,4 @@
-﻿.carousel {
+.carousel {
   display: flex;
   flex-direction: column;
   gap: var(--space-sm);
@@ -64,8 +64,8 @@
 }
 
 .carousel__card {
-  flex: 0 0 70%;
-  min-width: 70%;
+  flex: 0 0 75%;
+  min-width: 75%;
   background: var(--bg-secondary);
   border-radius: 12px;
   padding: var(--space-md);
@@ -74,51 +74,59 @@
   gap: var(--space-sm);
   scroll-snap-align: start;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  min-height: 190px;
 }
 
-.carousel__card-header {
+/* News card */
+.carousel__news-card {
+  text-decoration: none;
+  color: inherit;
+  justify-content: space-between;
+  min-height: 120px;
+  border-left: 3px solid var(--solar-primary);
+}
+
+.carousel__news-card:active {
+  background: var(--bg-medium);
+}
+
+.carousel__news-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.carousel__news-meta {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: auto;
 }
 
-.carousel__card-title {
-  font-size: 0.75rem;
-  font-weight: 500;
+.carousel__news-source {
+  font-size: 0.65rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-secondary);
-  margin: 0;
-}
-
-.carousel__card-badge {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  align-self: flex-start;
-}
-
-.carousel__card-badge--normal {
-  background: rgba(90, 200, 250, 0.15);
-  color: var(--data-cyan);
-}
-
-.carousel__card-badge--quiet {
-  background: rgba(76, 217, 100, 0.15);
-  color: #4cd964;
-}
-
-.carousel__card-badge--watch {
-  background: rgba(255, 149, 0, 0.2);
   color: var(--solar-primary);
 }
 
-.carousel__card-value {
-  font-size: 1.75rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-top: var(--space-xs);
+.carousel__news-time {
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.04em;
+}
+
+.carousel__news-loading {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80px;
 }
