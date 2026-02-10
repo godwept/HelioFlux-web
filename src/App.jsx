@@ -3,6 +3,7 @@ import './App.css'
 import SolarHero from './components/SolarHero'
 import Carousel from './components/Carousel'
 import SpaceWeather from './components/SpaceWeather'
+import SolarActivity from './components/SolarActivity'
 
 function App() {
   const [activeTab, setActiveTab] = useState(() => {
@@ -27,9 +28,7 @@ function App() {
           </>
         )}
         {activeTab === 'space-weather' && <SpaceWeather />}
-        {activeTab === 'solar-activity' && (
-          <div className="panel">Solar Activity tracking is coming soon.</div>
-        )}
+        {activeTab === 'solar-activity' && <SolarActivity />}
       </main>
 
       <nav className="bottom-nav" aria-label="Primary">

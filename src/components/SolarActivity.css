@@ -1,0 +1,21 @@
+﻿.solar-activity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.solar-activity__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.solar-activity__title {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+.solar-activity__placeholder {
+  color: var(--text-tertiary);
+  text-align: center;
+}
