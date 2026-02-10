@@ -156,29 +156,48 @@ export async function fetchEnlilFrames() {
   const framesByRun = new Map();
 
   files.forEach(file => {
-    const timestampMatch = file.match(/(\d{8}_\d{6})/);
-    if (!timestampMatch) {
+    const runMatch = file.match(/enlil_com2_(\d+)_/);
+    const timestampMatch = file.match(/(\d{8}[T_]?\d{6})/);
+    if (!runMatch || !timestampMatch) {
       return;
     }
-    const runKey = timestampMatch[1];
+    const runKey = runMatch[1];
     if (!framesByRun.has(runKey)) {
       framesByRun.set(runKey, []);
     }
-    framesByRun.get(runKey).push(file);
+    framesByRun.get(runKey).push({
+      file,
+      timestamp: parseTimestamp(timestampMatch[1]),
+    });
   });
 
-  const runKeys = [...framesByRun.keys()].sort();
-  const latestRunKey = runKeys.at(-1);
-  if (!latestRunKey) {
+  if (!framesByRun.size) {
     return { frames: [], timestamp: null };
   }
 
-  const frames = framesByRun.get(latestRunKey).sort();
-  const downsampleStep = Math.max(1, Math.ceil(frames.length / 48));
-  const downsampled = frames.filter((_, index) => index % downsampleStep === 0);
+  const latestRun = [...framesByRun.entries()].reduce((latest, entry) => {
+    const latestFrame = entry[1].reduce(
+      (max, frame) => (frame.timestamp > max ? frame.timestamp : max),
+      new Date(0)
+    );
+    if (!latest || latestFrame > latest.latestFrame) {
+      return { runKey: entry[0], latestFrame, frames: entry[1] };
+    }
+    return latest;
+  }, null);
+
+  if (!latestRun) {
+    return { frames: [], timestamp: null };
+  }
+
+  const sortedFrames = latestRun.frames
+    .filter(frame => frame.timestamp)
+    .sort((a, b) => a.timestamp - b.timestamp);
+  const downsampleStep = Math.max(1, Math.ceil(sortedFrames.length / 48));
+  const downsampled = sortedFrames.filter((_, index) => index % downsampleStep === 0);
 
   return {
-    frames: downsampled.map(frame => `${WORKER_BASE_URL}/enlil/${frame}`),
-    timestamp: parseTimestamp(latestRunKey),
+    frames: downsampled.map(frame => `${WORKER_BASE_URL}/enlil/${frame.file}`),
+    timestamp: latestRun.latestFrame,
   };
 }
