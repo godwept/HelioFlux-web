@@ -73,7 +73,8 @@ export default {
       }
       // NOAA flare events text files
       else if (path.startsWith('/api/flare-events/')) {
-        const date = path.split('/').pop().replace('.txt', '');
+        const raw = path.split('/').pop().replace('.txt', '');
+        const date = raw.replace('events', '');
         // Try HTTPS first, fallback handled by error catching
         targetUrl = `https://services.swpc.noaa.gov/text/${date}events.txt`;
       }
