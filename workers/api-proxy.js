@@ -111,7 +111,7 @@ export default {
       const isHekRequest = path.startsWith('/api/hek');
 
       // Fetch from target API
-      const apiResponse = await fetch(targetUrl, {
+      let apiResponse = await fetch(targetUrl, {
         method: request.method,
         headers: isHekRequest
           ? {
@@ -121,6 +121,18 @@ export default {
           : request.headers,
         body: request.body,
       });
+
+      if (path.startsWith('/api/ace-epam/') && apiResponse.status === 404) {
+        const acePath = path.replace('/api/ace-epam/', '');
+        apiResponse = await fetch(
+          `https://services.swpc.noaa.gov/pub/lists/ace2/${acePath}`,
+          {
+            method: request.method,
+            headers: request.headers,
+            body: request.body,
+          }
+        );
+      }
 
       if (path.startsWith('/api/flare-events/') && apiResponse.status === 404) {
         return new Response('', {
