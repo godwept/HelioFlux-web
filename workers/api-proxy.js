@@ -113,6 +113,7 @@ export default {
       }
 
       const isHekRequest = path.startsWith('/api/hek');
+      const isNewsRequest = path.startsWith('/api/news');
 
       // Fetch from target API
       let apiResponse = await fetch(targetUrl, {
@@ -122,7 +123,12 @@ export default {
               'User-Agent': 'Mozilla/5.0 (HelioFlux)',
               'Accept': 'application/json,text/plain,*/*',
             }
-          : request.headers,
+          : isNewsRequest
+            ? {
+                'User-Agent': 'Mozilla/5.0 (HelioFlux)',
+                'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+              }
+            : request.headers,
         body: request.body,
       });
 
