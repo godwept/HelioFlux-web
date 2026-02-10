@@ -95,10 +95,6 @@
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
-.solar-activity__card--wide {
-  flex-basis: 90%;
-  min-width: 90%;
-}
 
 .solar-activity__card-header {
   display: flex;

@@ -480,7 +480,7 @@ const SolarActivity = () => {
         ) : (
           <div className="solar-activity__carousel">
             <div className="solar-activity__carousel-track" role="list">
-              <article className="solar-activity__card solar-activity__card--wide" role="listitem">
+              <article className="solar-activity__card" role="listitem">
                 <div className="solar-activity__card-header">
                   <h4>HMI Magnetogram</h4>
                   <span className="solar-activity__source">SDO</span>
