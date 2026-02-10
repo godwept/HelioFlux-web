@@ -91,7 +91,7 @@ export default {
         targetUrl = 'https://services.swpc.noaa.gov/images/animations/enlil/';
       }
       // HEK active region data
-      else if (path.startsWith('/api/hek/')) {
+      else if (path.startsWith('/api/hek')) {
         targetUrl = 'https://www.lmsal.com/hek/her' + url.search;
       }
       else {
