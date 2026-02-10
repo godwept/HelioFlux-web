@@ -1,0 +1,26 @@
+﻿.chart {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.chart__svg {
+  width: 100%;
+  height: 160px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+}
+
+.chart__footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.chart-empty {
+  padding: var(--space-md);
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
