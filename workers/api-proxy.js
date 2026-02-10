@@ -96,6 +96,10 @@ export default {
       else if (path.startsWith('/api/hek')) {
         targetUrl = 'https://www.lmsal.com/hek/her' + url.search;
       }
+      // Google News RSS feed for space weather news
+      else if (path.startsWith('/api/news')) {
+        targetUrl = 'https://news.google.com/rss/search?q=solar+storm+aurora&hl=en-US&gl=US&ceid=US:en';
+      }
       // ACE EPAM particle data
       else if (path.startsWith('/api/ace-epam/')) {
         const acePath = path.replace('/api/ace-epam/', '');

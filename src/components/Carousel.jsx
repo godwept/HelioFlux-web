@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { fetchKpIndex, fetchMagneticFieldData, fetchProtonFlux } from '../services/spaceWeather';
-import { fetchFlareProbabilities, fetchXrayFlux } from '../services/solarActivity';
+import { fetchKpIndex, fetchMagneticFieldData } from '../services/spaceWeather';
+import { fetchFlareProbabilities } from '../services/solarActivity';
+import { fetchNews } from '../services/news';
 import './Carousel.css';
 
 function getKpLabel(kp) {
@@ -17,66 +18,33 @@ function getFlareLabel(probs) {
   return 'Low';
 }
 
-function getGScale(kp) {
-  if (kp >= 9) return { level: 'G5', label: 'Extreme', severity: 'extreme' };
-  if (kp >= 8) return { level: 'G4', label: 'Severe', severity: 'severe' };
-  if (kp >= 7) return { level: 'G3', label: 'Strong', severity: 'strong' };
-  if (kp >= 6) return { level: 'G2', label: 'Moderate', severity: 'moderate' };
-  if (kp >= 5) return { level: 'G1', label: 'Minor', severity: 'minor' };
-  return { level: 'G0', label: 'None', severity: 'none' };
-}
-
-function getSScale(flux) {
-  if (flux >= 1e5) return { level: 'S5', label: 'Extreme', severity: 'extreme' };
-  if (flux >= 1e4) return { level: 'S4', label: 'Severe', severity: 'severe' };
-  if (flux >= 1e3) return { level: 'S3', label: 'Strong', severity: 'strong' };
-  if (flux >= 1e2) return { level: 'S2', label: 'Moderate', severity: 'moderate' };
-  if (flux >= 10) return { level: 'S1', label: 'Minor', severity: 'minor' };
-  return { level: 'S0', label: 'None', severity: 'none' };
-}
-
-function getRScale(flux) {
-  if (flux >= 1e-2) return { level: 'R5', label: 'Extreme', severity: 'extreme' };
-  if (flux >= 1e-3) return { level: 'R4', label: 'Severe', severity: 'severe' };
-  if (flux >= 1e-4) return { level: 'R3', label: 'Strong', severity: 'strong' };
-  if (flux >= 5e-5) return { level: 'R2', label: 'Moderate', severity: 'moderate' };
-  if (flux >= 1e-5) return { level: 'R1', label: 'Minor', severity: 'minor' };
-  return { level: 'R0', label: 'None', severity: 'none' };
-}
-
-function formatProtonFlux(flux) {
-  if (flux >= 100) return `${Math.round(flux)} pfu`;
-  if (flux >= 1) return `${flux.toFixed(1)} pfu`;
-  return `${flux.toFixed(2)} pfu`;
-}
-
-function formatXrayClass(flux) {
-  if (flux >= 1e-4) return `X${(flux / 1e-4).toFixed(1)}`;
-  if (flux >= 1e-5) return `M${(flux / 1e-5).toFixed(1)}`;
-  if (flux >= 1e-6) return `C${(flux / 1e-6).toFixed(1)}`;
-  if (flux >= 1e-7) return `B${(flux / 1e-7).toFixed(1)}`;
-  return `A${(flux / 1e-8).toFixed(1)}`;
+function timeAgo(date) {
+  if (!date) return '';
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
 }
 
 const Carousel = () => {
   const [kp, setKp] = useState(null);
   const [bz, setBz] = useState(null);
   const [flareLabel, setFlareLabel] = useState(null);
-  const [protonFlux, setProtonFlux] = useState(null);
-  const [xrayFlux, setXrayFlux] = useState(null);
+  const [articles, setArticles] = useState([]);
 
   useEffect(() => {
     let mounted = true;
 
-    const loadData = async () => {
-      const [kpResult, magResult, flareResult, protonResult, xrayResult] =
-        await Promise.allSettled([
-          fetchKpIndex(),
-          fetchMagneticFieldData(),
-          fetchFlareProbabilities(),
-          fetchProtonFlux(),
-          fetchXrayFlux(),
-        ]);
+    const loadBadgeData = async () => {
+      const [kpResult, magResult, flareResult] = await Promise.allSettled([
+        fetchKpIndex(),
+        fetchMagneticFieldData(),
+        fetchFlareProbabilities(),
+      ]);
 
       if (!mounted) return;
 
@@ -93,30 +61,29 @@ const Carousel = () => {
       if (flareResult.status === 'fulfilled') {
         setFlareLabel(getFlareLabel(flareResult.value));
       }
+    };
 
-      if (protonResult.status === 'fulfilled' && protonResult.value.length > 0) {
-        const latest = protonResult.value[protonResult.value.length - 1];
-        setProtonFlux(latest.flux);
-      }
-
-      if (xrayResult.status === 'fulfilled' && xrayResult.value.length > 0) {
-        const latest = xrayResult.value[xrayResult.value.length - 1];
-        const flux = latest.goes18Long ?? latest.goes19Long;
-        if (flux !== null) setXrayFlux(flux);
+    const loadNews = async () => {
+      try {
+        const news = await fetchNews();
+        if (mounted) setArticles(news);
+      } catch (err) {
+        console.warn('Failed to load news:', err);
       }
     };
 
-    loadData();
-    const interval = setInterval(loadData, 60_000);
+    loadBadgeData();
+    loadNews();
+
+    const badgeInterval = setInterval(loadBadgeData, 60_000);
+    const newsInterval = setInterval(loadNews, 15 * 60_000);
+
     return () => {
       mounted = false;
-      clearInterval(interval);
+      clearInterval(badgeInterval);
+      clearInterval(newsInterval);
     };
   }, []);
-
-  const gScale = kp !== null ? getGScale(kp) : null;
-  const sScale = protonFlux !== null ? getSScale(protonFlux) : null;
-  const rScale = xrayFlux !== null ? getRScale(xrayFlux) : null;
 
   return (
     <div className="carousel">
@@ -134,56 +101,30 @@ const Carousel = () => {
         </div>
       </div>
       <div className="carousel__track">
-        <div className={`carousel__card carousel__scale-card carousel__scale-card--${gScale?.severity ?? 'loading'}`}>
-          <div className="carousel__card-header">
-            <h3 className="carousel__card-title">Geomagnetic Storms</h3>
-            {gScale && (
-              <span className={`carousel__scale-badge carousel__scale-badge--${gScale.severity}`}>
-                {gScale.level}
-              </span>
-            )}
+        {articles.length === 0 && (
+          <div className="carousel__card carousel__news-card">
+            <div className="carousel__news-loading">Loading news...</div>
           </div>
-          <div className="carousel__card-value">
-            {gScale ? gScale.label : '--'}
-          </div>
-          <div className="carousel__card-detail">
-            {kp !== null ? `Kp ${kp.toFixed(2)}` : ''}
-          </div>
-        </div>
-
-        <div className={`carousel__card carousel__scale-card carousel__scale-card--${sScale?.severity ?? 'loading'}`}>
-          <div className="carousel__card-header">
-            <h3 className="carousel__card-title">Solar Radiation</h3>
-            {sScale && (
-              <span className={`carousel__scale-badge carousel__scale-badge--${sScale.severity}`}>
-                {sScale.level}
-              </span>
-            )}
-          </div>
-          <div className="carousel__card-value">
-            {sScale ? sScale.label : '--'}
-          </div>
-          <div className="carousel__card-detail">
-            {protonFlux !== null ? `\u226510 MeV: ${formatProtonFlux(protonFlux)}` : ''}
-          </div>
-        </div>
-
-        <div className={`carousel__card carousel__scale-card carousel__scale-card--${rScale?.severity ?? 'loading'}`}>
-          <div className="carousel__card-header">
-            <h3 className="carousel__card-title">Radio Blackouts</h3>
-            {rScale && (
-              <span className={`carousel__scale-badge carousel__scale-badge--${rScale.severity}`}>
-                {rScale.level}
-              </span>
-            )}
-          </div>
-          <div className="carousel__card-value">
-            {rScale ? rScale.label : '--'}
-          </div>
-          <div className="carousel__card-detail">
-            {xrayFlux !== null ? `X-Ray: ${formatXrayClass(xrayFlux)}` : ''}
-          </div>
-        </div>
+        )}
+        {articles.map((article, index) => (
+          <a
+            key={article.link}
+            className="carousel__card carousel__news-card"
+            href={article.link}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <h3 className="carousel__news-title">{article.title}</h3>
+            <div className="carousel__news-meta">
+              {article.source && (
+                <span className="carousel__news-source">{article.source}</span>
+              )}
+              {article.pubDate && (
+                <span className="carousel__news-time">{timeAgo(article.pubDate)}</span>
+              )}
+            </div>
+          </a>
+        ))}
       </div>
     </div>
   );
