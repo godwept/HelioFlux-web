@@ -165,8 +165,8 @@
   flex-shrink: 0;
 }
 
-.aurora-globe__legend-item--weak::before     { background: rgba( 10, 132, 255, 0.85); }
-.aurora-globe__legend-item--moderate::before { background: rgba( 90, 200, 250, 0.90); }
-.aurora-globe__legend-item--strong::before   { background: rgba(  0, 210, 190, 1.0);  }
-.aurora-globe__legend-item--severe::before   { background: rgba( 52, 199,  89, 1.0);  }
-.aurora-globe__legend-item--extreme::before  { background: rgba(255, 149,   0, 1.0);  }
+.aurora-globe__legend-item--weak::before     { background: rgba( 90, 200, 250, 0.90); } /* cyan  — low      */
+.aurora-globe__legend-item--moderate::before { background: rgba(  0, 210, 190, 1.0);  } /* teal  — moderate */
+.aurora-globe__legend-item--strong::before   { background: rgba( 52, 199,  89, 1.0);  } /* green — strong   */
+.aurora-globe__legend-item--severe::before   { background: rgba(255, 149,   0, 1.0);  } /* orange — severe  */
+.aurora-globe__legend-item--extreme::before  { background: rgba(255,  59,  48, 1.0);  } /* red   — extreme  */

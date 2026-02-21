@@ -4,21 +4,20 @@ import './AuroraGlobe.css';
 
 // ─── Aurora intensity → RGBA color scale ────────────────────────────────────
 // Theme-aligned palette using the app's design tokens as reference points.
-// Opacity is intentionally soft so the globe shows through the aurora band.
+// Floor is intensity >= 5 (values below are filtered out in the service layer).
+// Opacity kept deliberately low throughout so the globe reads through the aurora.
 //
-//   Weak     2–3  : blue     (#0a84ff family) — very transparent
-//   Low      4–8  : cyan     (#5ac8fa / --data-cyan)
-//   Moderate 9–15 : teal     (between cyan and green)
+//   Low      5–8  : cyan     (#5ac8fa / --data-cyan)
+//   Moderate 9–15 : teal
 //   Strong   16–25: green    (#34c759)
 //   Severe   26–40: orange   (#ff9500 / --solar-primary)
 //   Extreme  41+  : red      (#ff3b30 / --alert-red)
 const COLOR_BANDS = [
-  { min: 2,  color: 'rgba(10,  132, 255, 0.28)' },  // blue   — weak
-  { min: 4,  color: 'rgba(90,  200, 250, 0.42)' },  // cyan   — low
-  { min: 9,  color: 'rgba(0,   210, 190, 0.56)' },  // teal   — moderate
-  { min: 16, color: 'rgba(52,  199,  89, 0.68)' },  // green  — strong
-  { min: 26, color: 'rgba(255, 149,   0, 0.78)' },  // orange — severe
-  { min: 41, color: 'rgba(255,  59,  48, 0.88)' },  // red    — extreme
+  { min: 5,  color: 'rgba(90,  200, 250, 0.22)' },  // cyan   — low
+  { min: 9,  color: 'rgba(0,   210, 190, 0.36)' },  // teal   — moderate
+  { min: 16, color: 'rgba(52,  199,  89, 0.50)' },  // green  — strong
+  { min: 26, color: 'rgba(255, 149,   0, 0.62)' },  // orange — severe
+  { min: 41, color: 'rgba(255,  59,  48, 0.72)' },  // red    — extreme
 ];
 
 function auroraColor(intensity) {
@@ -127,7 +126,7 @@ const AuroraGlobe = ({ ovationData }) => {
 
       {/* ── Color intensity legend (bottom-left) ───────────── */}
       <div className="aurora-globe__legend">
-        <span className="aurora-globe__legend-item aurora-globe__legend-item--weak">Weak</span>
+        <span className="aurora-globe__legend-item aurora-globe__legend-item--weak">Low</span>
         <span className="aurora-globe__legend-item aurora-globe__legend-item--moderate">Moderate</span>
         <span className="aurora-globe__legend-item aurora-globe__legend-item--strong">Strong</span>
         <span className="aurora-globe__legend-item aurora-globe__legend-item--severe">Severe</span>

@@ -163,16 +163,20 @@ export async function fetchOvationData() {
 
   // Data-reduction pipeline (applied in order):
   //   1. Drop zero-intensity points  — eliminates ~80 % of coordinates
-  //   2. Drop faint background noise  — keep intensity >= 2
-  //   3. Spatial thinning for low-intensity band (2–3): keep even longitudes only
-  // Typical post-filter count: 3 000 – 6 000 points, well within GPU limits.
+  //   2. Raise display floor to >= 5   — skips diffuse background glow
+  //   3. Spatial thinning for band 5–8 : keep even longitudes only
+  // Typical post-filter count: 1 500 – 3 500 points.
   const points = [];
   for (const coord of json.coordinates) {
     const [lng, lat, intensity] = coord;
-    if (intensity < 2) continue;
-    if (intensity < 4 && lng % 2 !== 0) continue; // thin faint ring
+    if (intensity < 5) continue;                    // raise floor
+    if (intensity < 9 && lng % 2 !== 0) continue;  // thin low-intensity band
     points.push({ lat, lng, intensity });
   }
+
+  // Invalidate any previously cached result so the new filter applies immediately
+  _ovationCache = null;
+  _ovationCacheTime = 0;
 
   console.log(
     `[OVATION] ${points.length} points after filtering (raw: ${json.coordinates.length})`
