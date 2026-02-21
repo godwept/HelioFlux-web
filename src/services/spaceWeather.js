@@ -135,3 +135,95 @@ export async function fetchGoesMagnetometerData() {
 
   return { data, primaryLabel, secondaryLabel };
 }
+
+// ─── OVATION Aurora Model ────────────────────────────────────────────────────
+
+// Module-level cache — the OVATION JSON is large (~2–4 MB) and updates every 5 min.
+// A 10-minute in-memory cache prevents re-fetching on every tab switch.
+let _ovationCache = null;
+let _ovationCacheTime = 0;
+const OVATION_CACHE_TTL = 10 * 60 * 1000;
+
+export async function fetchOvationData() {
+  const now = Date.now();
+  if (_ovationCache && now - _ovationCacheTime < OVATION_CACHE_TTL) {
+    return _ovationCache;
+  }
+
+  const json = await fetchJson(
+    `${NOAA_PROXY_BASE_URL}/json/ovation_aurora_latest.json`
+  );
+
+  const observationTime = json['Observation Time']
+    ? new Date(json['Observation Time'])
+    : null;
+  const forecastTime = json['Forecast Time']
+    ? new Date(json['Forecast Time'])
+    : null;
+
+  // Data-reduction pipeline (applied in order):
+  //   1. Drop zero-intensity points  — eliminates ~80 % of coordinates
+  //   2. Raise display floor to >= 5   — skips diffuse background glow
+  //   3. Spatial thinning for band 5–8 : keep even longitudes only
+  // Typical post-filter count: 1 500 – 3 500 points.
+  const points = [];
+  for (const coord of json.coordinates) {
+    const [lng, lat, intensity] = coord;
+    if (intensity < 5) continue;                    // raise floor
+    if (intensity < 9 && lng % 2 !== 0) continue;  // thin low-intensity band
+    points.push({ lat, lng, intensity });
+  }
+
+  // Invalidate any previously cached result so the new filter applies immediately
+  _ovationCache = null;
+  _ovationCacheTime = 0;
+
+  console.log(
+    `[OVATION] ${points.length} points after filtering (raw: ${json.coordinates.length})`
+  );
+
+  const result = { observationTime, forecastTime, points };
+  _ovationCache = result;
+  _ovationCacheTime = now;
+  return result;
+}
+
+// ─── Hemispheric Power ───────────────────────────────────────────────────────
+
+async function fetchText(url) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  return response.text();
+}
+
+export async function fetchHemisphericPowerData() {
+  const text = await fetchText(
+    `${NOAA_PROXY_BASE_URL}/text/aurora-nowcast-hemi-power.txt`
+  );
+
+  const data = [];
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim();
+    // Skip blank lines and comment/header lines
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const parts = trimmed.split(/\s+/);
+    // Expected format: YYYY-MM-DD_HH:MM  YYYY-MM-DD_HH:MM  NORTH  SOUTH
+    if (parts.length < 4) continue;
+    // Validate obs-timestamp shape before parsing
+    if (!/^\d{4}-\d{2}-\d{2}_\d{2}:\d{2}$/.test(parts[0])) continue;
+
+    const ts = new Date(parts[0].replace('_', 'T') + ':00Z');
+    if (Number.isNaN(ts.valueOf())) continue;
+
+    const north = parseFloat(parts[2]);
+    const south = parseFloat(parts[3]);
+    if (!Number.isFinite(north) || !Number.isFinite(south)) continue;
+
+    data.push({ timestamp: ts, north, south });
+  }
+
+  return data;
+}
