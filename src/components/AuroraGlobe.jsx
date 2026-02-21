@@ -3,18 +3,22 @@ import Globe from 'react-globe.gl';
 import './AuroraGlobe.css';
 
 // ─── Aurora intensity → RGBA color scale ────────────────────────────────────
-// Values observed in NOAA OVATION data:
-//   Quiet day  : 2–8    (faint green/teal ring)
-//   Active     : 9–20   (bright green)
-//   Storm      : 21–50  (yellow-green → orange)
-//   Major storm: 50+    (red / white)
+// Theme-aligned palette using the app's design tokens as reference points.
+// Opacity is intentionally soft so the globe shows through the aurora band.
+//
+//   Weak     2–3  : blue     (#0a84ff family) — very transparent
+//   Low      4–8  : cyan     (#5ac8fa / --data-cyan)
+//   Moderate 9–15 : teal     (between cyan and green)
+//   Strong   16–25: green    (#34c759)
+//   Severe   26–40: orange   (#ff9500 / --solar-primary)
+//   Extreme  41+  : red      (#ff3b30 / --alert-red)
 const COLOR_BANDS = [
-  { min: 2,  color: 'rgba(0, 220, 180, 0.40)' },  // faint teal
-  { min: 4,  color: 'rgba(0, 255, 120, 0.65)' },  // green
-  { min: 9,  color: 'rgba(80, 255, 60, 0.85)'  },  // bright green
-  { min: 16, color: 'rgba(200, 255, 0, 0.95)'  },  // yellow-green
-  { min: 26, color: 'rgba(255, 180, 0, 1.0)'   },  // orange
-  { min: 41, color: 'rgba(255, 80, 80, 1.0)'   },  // red / extreme
+  { min: 2,  color: 'rgba(10,  132, 255, 0.28)' },  // blue   — weak
+  { min: 4,  color: 'rgba(90,  200, 250, 0.42)' },  // cyan   — low
+  { min: 9,  color: 'rgba(0,   210, 190, 0.56)' },  // teal   — moderate
+  { min: 16, color: 'rgba(52,  199,  89, 0.68)' },  // green  — strong
+  { min: 26, color: 'rgba(255, 149,   0, 0.78)' },  // orange — severe
+  { min: 41, color: 'rgba(255,  59,  48, 0.88)' },  // red    — extreme
 ];
 
 function auroraColor(intensity) {
