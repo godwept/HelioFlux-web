@@ -111,18 +111,7 @@ const AuroraGlobe = ({ ovationData }) => {
       {/* ── Source label (top-left) ─────────────────────────── */}
       <div className="aurora-globe__source">NOAA OVATION</div>
 
-      {/* ── LIVE badge + timestamp (top-right) ─────────────── */}
-      <div className="aurora-globe__badge">
-        <div className="aurora-globe__badge-pill">
-          <span className="aurora-globe__badge-dot" />
-          <span>Live</span>
-        </div>
-        {ovationData.observationTime && (
-          <span className="aurora-globe__timestamp">
-            Observed {formatUtcTime(ovationData.observationTime)}
-          </span>
-        )}
-      </div>
+      
 
     </div>
   );

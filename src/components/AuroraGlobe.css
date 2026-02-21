@@ -69,47 +69,6 @@
   pointer-events: none;
 }
 
-/* ── LIVE badge (top-right) ─────────────────────────────────────────────── */
-
-.aurora-globe__badge {
-  position: absolute;
-  top: var(--space-md);
-  right: var(--space-md);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  z-index: 10;
-  pointer-events: none;
-}
-
-.aurora-globe__badge-pill {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-  background: rgba(12, 12, 12, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #00dcb4;
-  border: 1px solid rgba(0, 220, 180, 0.28);
-}
-
-.aurora-globe__badge-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #00dcb4;
-  box-shadow: 0 0 6px #00dcb4;
-  animation: aurora-pulse 2s ease-in-out infinite;
-}
-
-@keyframes aurora-pulse {
-  0%, 100% {
     opacity: 1;
     transform: scale(1);
   }
