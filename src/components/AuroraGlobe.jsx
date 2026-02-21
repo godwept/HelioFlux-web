@@ -124,14 +124,6 @@ const AuroraGlobe = ({ ovationData }) => {
         )}
       </div>
 
-      {/* ── Color intensity legend (bottom-left) ───────────── */}
-      <div className="aurora-globe__legend">
-        <span className="aurora-globe__legend-item aurora-globe__legend-item--weak">Low</span>
-        <span className="aurora-globe__legend-item aurora-globe__legend-item--moderate">Moderate</span>
-        <span className="aurora-globe__legend-item aurora-globe__legend-item--strong">Strong</span>
-        <span className="aurora-globe__legend-item aurora-globe__legend-item--severe">Severe</span>
-        <span className="aurora-globe__legend-item aurora-globe__legend-item--extreme">Extreme</span>
-      </div>
     </div>
   );
 };
