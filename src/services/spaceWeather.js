@@ -94,3 +94,44 @@ export async function fetchProtonFlux() {
     .filter(entry => !Number.isNaN(entry.timestamp.valueOf()))
     .sort((a, b) => a.timestamp - b.timestamp);
 }
+
+export async function fetchGoesMagnetometerData() {
+  const [sources, primaryRaw, secondaryRaw] = await Promise.all([
+    fetchJson(`${NOAA_PROXY_BASE_URL}/json/goes/instrument-sources.json`),
+    fetchJson(`${NOAA_PROXY_BASE_URL}/json/goes/primary/magnetometers-3-day.json`),
+    fetchJson(`${NOAA_PROXY_BASE_URL}/json/goes/secondary/magnetometers-3-day.json`),
+  ]);
+
+  // instrument-sources.json is an array; grab the first (and only) entry
+  const sourceEntry = Array.isArray(sources) ? sources[0] : sources;
+  const primarySat = sourceEntry?.magnetometers?.primary ?? '?';
+  const secondarySat = sourceEntry?.magnetometers?.secondary ?? '?';
+  const primaryLabel = `GOES-${primarySat}`;
+  const secondaryLabel = `GOES-${secondarySat}`;
+
+  // Index secondary entries by time_tag string for O(1) merging
+  const secondaryMap = new Map();
+  for (const entry of secondaryRaw) {
+    secondaryMap.set(entry.time_tag, entry);
+  }
+
+  // Build unified data array anchored on primary timestamps.
+  // null values cause Recharts to render a line break (connectNulls defaults false)
+  // which visually matches the SWPC chart behaviour during arcjet-firing periods.
+  const data = primaryRaw
+    .map(entry => {
+      const sec = secondaryMap.get(entry.time_tag);
+      return {
+        timestamp: new Date(entry.time_tag),
+        hpPrimary: entry.arcjet_flag ? null : (entry.Hp ?? null),
+        hpSecondary: sec
+          ? sec.arcjet_flag
+            ? null
+            : (sec.Hp ?? null)
+          : null,
+      };
+    })
+    .filter(entry => !Number.isNaN(entry.timestamp.valueOf()));
+
+  return { data, primaryLabel, secondaryLabel };
+}

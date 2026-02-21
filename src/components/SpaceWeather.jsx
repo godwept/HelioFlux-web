@@ -1,5 +1,6 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  fetchGoesMagnetometerData,
   fetchKpIndex,
   fetchMagneticFieldData,
   fetchPlasmaData,
@@ -51,20 +52,31 @@ const SpaceWeather = () => {
   const [magneticData, setMagneticData] = useState([]);
   const [plasmaData, setPlasmaData] = useState([]);
   const [kpData, setKpData] = useState([]);
+  const [magnetometerData, setMagnetometerData] = useState([]);
+  const [magnetometerLabels, setMagnetometerLabels] = useState({
+    primary: 'GOES-P',
+    secondary: 'GOES-S',
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      const [magnetic, plasma, kp] = await Promise.all([
+      const [magnetic, plasma, kp, magnetometer] = await Promise.all([
         fetchMagneticFieldData(),
         fetchPlasmaData(),
         fetchKpIndex(),
+        fetchGoesMagnetometerData(),
       ]);
       setMagneticData(magnetic);
       setPlasmaData(plasma);
       setKpData(kp);
+      setMagnetometerData(magnetometer.data);
+      setMagnetometerLabels({
+        primary: magnetometer.primaryLabel,
+        secondary: magnetometer.secondaryLabel,
+      });
     } catch (err) {
       setError(err.message ?? 'Unable to load space weather data.');
     } finally {
@@ -90,6 +102,10 @@ const SpaceWeather = () => {
 
   const filteredKp = useMemo(() => filterByWindow(kpData, 48), [kpData]);
 
+  const filteredMagnetometer = useMemo(
+    () => filterByWindow(magnetometerData, timeframe.hours),
+    [magnetometerData, timeframe]
+  );
 
   const currentBz = useMemo(
     () => getLatestValue(magneticData, 'bz'),
@@ -194,6 +210,20 @@ const SpaceWeather = () => {
               data={filteredPlasma}
               series={[
                 { key: 'temperature', color: '#0a84ff', label: 'Temperature' },
+              ]}
+            />
+          </div>
+
+          <div className="panel chart-card">
+            <div className="chart-card__header">
+              <h3>Hp (nT)</h3>
+              <span>GOES Magnetometer</span>
+            </div>
+            <LineChart
+              data={filteredMagnetometer}
+              series={[
+                { key: 'hpPrimary', color: '#0a84ff', label: magnetometerLabels.primary },
+                { key: 'hpSecondary', color: '#ff375f', label: magnetometerLabels.secondary },
               ]}
             />
           </div>
