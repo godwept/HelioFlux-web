@@ -61,6 +61,26 @@ const AuroraGlobe = ({ ovationData }) => {
     return () => ro.disconnect();
   }, []);
 
+  // Dispose the Three.js renderer on unmount to free the WebGL context.
+  // Browsers cap simultaneous contexts (~8–16); leaking one here degrades
+  // GPU resources for other tabs/components (e.g. Solar Activity GIFs).
+  useEffect(() => {
+    return () => {
+      const globe = globeRef.current;
+      if (!globe) return;
+      const controls = globe.controls();
+      if (controls) {
+        controls.autoRotate = false;
+        controls.dispose();
+      }
+      const renderer = globe.renderer();
+      if (renderer) {
+        renderer.dispose();
+        renderer.forceContextLoss();
+      }
+    };
+  }, []);
+
   // Once the globe WebGL scene is ready, point the camera and start rotation
   const handleGlobeReady = useCallback(() => {
     const globe = globeRef.current;
