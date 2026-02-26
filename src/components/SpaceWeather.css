@@ -99,3 +99,11 @@
 .kp-status {
   color: var(--solar-primary);
 }
+
+/* ── Aurora Globe Hero ───────────────────────────────────────────────────── */
+
+.space-weather__hero {
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+}

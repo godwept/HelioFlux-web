@@ -1,9 +1,13 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  fetchGoesMagnetometerData,
+  fetchHemisphericPowerData,
   fetchKpIndex,
   fetchMagneticFieldData,
+  fetchOvationData,
   fetchPlasmaData,
 } from '../services/spaceWeather';
+import AuroraGlobe from './AuroraGlobe';
 import LineChart from './LineChart';
 import BarChart from './BarChart';
 import './SpaceWeather.css';
@@ -51,24 +55,49 @@ const SpaceWeather = () => {
   const [magneticData, setMagneticData] = useState([]);
   const [plasmaData, setPlasmaData] = useState([]);
   const [kpData, setKpData] = useState([]);
+  const [magnetometerData, setMagnetometerData] = useState([]);
+  const [magnetometerLabels, setMagnetometerLabels] = useState({
+    primary: 'GOES-P',
+    secondary: 'GOES-S',
+  });
+  const [ovationData, setOvationData] = useState(null);
+  const [hpData, setHpData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const loadData = useCallback(async () => {
     try {
       setError(null);
-      const [magnetic, plasma, kp] = await Promise.all([
+      const [magnetic, plasma, kp, magnetometer] = await Promise.all([
         fetchMagneticFieldData(),
         fetchPlasmaData(),
         fetchKpIndex(),
+        fetchGoesMagnetometerData(),
       ]);
       setMagneticData(magnetic);
       setPlasmaData(plasma);
       setKpData(kp);
+      setMagnetometerData(magnetometer.data);
+      setMagnetometerLabels({
+        primary: magnetometer.primaryLabel,
+        secondary: magnetometer.secondaryLabel,
+      });
     } catch (err) {
       setError(err.message ?? 'Unable to load space weather data.');
     } finally {
       setIsLoading(false);
+    }
+
+    // Load globe + HP data non-blocking — large files, separate from main charts
+    try {
+      const [ovation, hp] = await Promise.all([
+        fetchOvationData(),
+        fetchHemisphericPowerData(),
+      ]);
+      setOvationData(ovation);
+      setHpData(hp);
+    } catch (err) {
+      console.warn('[HelioFlux] Globe/HP data unavailable:', err.message);
     }
   }, []);
 
@@ -90,6 +119,10 @@ const SpaceWeather = () => {
 
   const filteredKp = useMemo(() => filterByWindow(kpData, 48), [kpData]);
 
+  const filteredMagnetometer = useMemo(
+    () => filterByWindow(magnetometerData, timeframe.hours),
+    [magnetometerData, timeframe]
+  );
 
   const currentBz = useMemo(
     () => getLatestValue(magneticData, 'bz'),
@@ -110,6 +143,11 @@ const SpaceWeather = () => {
 
   return (
     <section className="space-weather">
+      {/* ── Aurora Globe Hero ──────────────────────────────── */}
+      <div className="space-weather__hero">
+        <AuroraGlobe ovationData={ovationData} />
+      </div>
+
       <header className="space-weather__header">
         <h2 className="space-weather__title">Solar Wind</h2>
       </header>
@@ -198,6 +236,20 @@ const SpaceWeather = () => {
             />
           </div>
 
+          <div className="panel chart-card">
+            <div className="chart-card__header">
+              <h3>Hp (nT)</h3>
+              <span>GOES Magnetometer</span>
+            </div>
+            <LineChart
+              data={filteredMagnetometer}
+              series={[
+                { key: 'hpPrimary', color: '#0a84ff', label: magnetometerLabels.primary },
+                { key: 'hpSecondary', color: '#ff375f', label: magnetometerLabels.secondary },
+              ]}
+            />
+          </div>
+
           <div className="space-weather__section">
             <h3 className="space-weather__section-title">Geomagnetic Activity</h3>
             <div className="panel chart-card">
@@ -206,6 +258,20 @@ const SpaceWeather = () => {
                 <span className="kp-status">{kpStatus(currentKp)}</span>
               </div>
               <BarChart data={filteredKp} colorForValue={kpColor} />
+            </div>
+
+            <div className="panel chart-card">
+              <div className="chart-card__header">
+                <h3>Hemispheric Power (GW)</h3>
+                <span>OVATION Model &middot; Today</span>
+              </div>
+              <LineChart
+                data={hpData}
+                series={[
+                  { key: 'north', color: '#5ac8fa', label: 'North' },
+                  { key: 'south', color: '#bf5af2', label: 'South' },
+                ]}
+              />
             </div>
           </div>
         </>
