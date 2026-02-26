@@ -1,0 +1,128 @@
+/* ── Container ────────────────────────────────────────────────────────────── */
+
+.aurora-globe {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000000;
+}
+
+/* The Globe component renders a plain canvas — make sure it sits flush */
+.aurora-globe canvas {
+  display: block;
+}
+
+/* ── Loading state ───────────────────────────────────────────────────────── */
+
+.aurora-globe--loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.aurora-globe__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.aurora-globe__spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(0, 220, 180, 0.18);
+  border-top-color: #00dcb4;
+  border-radius: 50%;
+  animation: aurora-spin 1s linear infinite;
+}
+
+@keyframes aurora-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Source label (top-left) ─────────────────────────────────────────────── */
+
+.aurora-globe__source {
+  position: absolute;
+  top: var(--space-md);
+  left: var(--space-md);
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  background: rgba(12, 12, 12, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ── LIVE badge (top-right) ─────────────────────────────────────────────── */
+
+.aurora-globe__badge {
+  position: absolute;
+  top: var(--space-md);
+  right: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.aurora-globe__badge-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(12, 12, 12, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #00dcb4;
+  border: 1px solid rgba(0, 220, 180, 0.28);
+}
+
+.aurora-globe__badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00dcb4;
+  box-shadow: 0 0 6px #00dcb4;
+  animation: aurora-pulse 2s ease-in-out infinite;
+}
+
+@keyframes aurora-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.65);
+  }
+}
+
+.aurora-globe__timestamp {
+  font-size: 0.6rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+  text-align: right;
+  padding-right: 2px;
+}
