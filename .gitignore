@@ -29,3 +29,6 @@ dist-ssr
 wrangler.toml.bak
 .dev.vars
 /.vs/CopilotSnapshots/B55F5E622B56B74D8D0692BE8287A8A2
+.vs/slnx.sqlite
+.vs/HelioFlux-web/CopilotIndices/18.0.988.22099/CodeChunks.db
+.vs/HelioFlux-web/CopilotIndices/18.0.988.22099/SemanticSymbols.db
