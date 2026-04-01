@@ -50,12 +50,11 @@ function parsePlasmaData(rows) {
     );
 }
 
-function parseKpIndex(rows) {
-  return rows
-    .slice(1)
-    .map(row => ({
-      timestamp: new Date(row[0].replace(' ', 'T') + 'Z'),
-      kp: parseFloat(row[1]) || 0,
+function parseKpIndex(data) {
+  return data
+    .map(entry => ({
+      timestamp: new Date(entry.time_tag + 'Z'),
+      kp: parseFloat(entry.Kp) || 0,
     }))
     .filter(entry => !Number.isNaN(entry.timestamp.valueOf()));
 }
