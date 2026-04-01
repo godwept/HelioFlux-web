@@ -57,3 +57,70 @@ export async function fetchNews() {
 
   return articles.slice(0, 10);
 }
+
+// ---------------------------------------------------------------------------
+// NOAA Forecast Discussion
+// ---------------------------------------------------------------------------
+
+function normalizeDiscussionText(raw) {
+  return raw
+    .replace(/\r/g, '')
+    .replace(/([^\n])\n([^\n])/g, '$1 $2') // rejoin soft-wrapped lines
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/ +/g, ' ')
+    .trim();
+}
+
+function parseForecastDiscussion(text) {
+  const issuedMatch = text.match(/:Issued:\s*(.+)/);
+  const issueTime = issuedMatch ? issuedMatch[1].trim() : null;
+
+  // Strip comment and metadata lines
+  const cleaned = text
+    .split('\n')
+    .filter(line => !line.trimStart().startsWith('#') && !line.startsWith(':'))
+    .join('\n');
+
+  const sectionDefs = [
+    { key: 'solar', title: 'Solar Activity' },
+    { key: 'particle', title: 'Energetic Particle' },
+    { key: 'wind', title: 'Solar Wind' },
+    { key: 'geospace', title: 'Geospace' },
+  ];
+
+  const results = [];
+  for (let i = 0; i < sectionDefs.length; i++) {
+    const { key, title } = sectionDefs[i];
+    const nextTitle = i + 1 < sectionDefs.length ? sectionDefs[i + 1].title : null;
+
+    const startIdx = cleaned.indexOf(title);
+    if (startIdx === -1) continue;
+
+    const endIdx = nextTitle
+      ? cleaned.indexOf(nextTitle, startIdx + title.length)
+      : cleaned.length;
+    const body = cleaned.slice(startIdx + title.length, endIdx !== -1 ? endIdx : cleaned.length);
+
+    const summaryMatch = body.match(/\.24 hr Summary\.\.\.\s*([\s\S]*?)(?=\.Forecast\.\.\.|$)/);
+    const forecastMatch = body.match(/\.Forecast\.\.\.\s*([\s\S]*?)$/);
+
+    results.push({
+      key,
+      title,
+      summary: summaryMatch ? normalizeDiscussionText(summaryMatch[1]) : '',
+      forecast: forecastMatch ? normalizeDiscussionText(forecastMatch[1]) : '',
+      issueTime,
+    });
+  }
+
+  return results;
+}
+
+export async function fetchForecastDiscussion() {
+  const response = await fetch(`${WORKER_BASE_URL}/noaa/text/discussion.txt`);
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  const text = await response.text();
+  return parseForecastDiscussion(text);
+}

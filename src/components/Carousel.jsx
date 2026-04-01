@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from 'react';
 import { fetchKpIndex, fetchMagneticFieldData } from '../services/spaceWeather';
 import { fetchFlareProbabilities } from '../services/solarActivity';
-import { fetchNews } from '../services/news';
+import { fetchForecastDiscussion } from '../services/news';
 import './Carousel.css';
 
 function getKpLabel(kp) {
@@ -18,23 +18,19 @@ function getFlareLabel(probs) {
   return 'Low';
 }
 
-function timeAgo(date) {
-  if (!date) return '';
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+function formatIssueTime(str) {
+  if (!str) return str;
+  const m = str.match(/(\d{4})\s+(\w{3})\s+(\d{1,2})\s+(\d{4})\s+UTC/);
+  if (!m) return str;
+  const [, , mon, day, hhmm] = m;
+  return `${mon} ${day}, ${hhmm.slice(0, 2)}:${hhmm.slice(2)} UTC`;
 }
 
 const Carousel = () => {
   const [kp, setKp] = useState(null);
   const [bz, setBz] = useState(null);
   const [flareLabel, setFlareLabel] = useState(null);
-  const [articles, setArticles] = useState([]);
+  const [sections, setSections] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -63,25 +59,25 @@ const Carousel = () => {
       }
     };
 
-    const loadNews = async () => {
+    const loadDiscussion = async () => {
       try {
-        const news = await fetchNews();
-        if (mounted) setArticles(news);
+        const data = await fetchForecastDiscussion();
+        if (mounted) setSections(data);
       } catch (err) {
-        console.warn('Failed to load news:', err);
+        console.warn('Failed to load forecast discussion:', err);
       }
     };
 
     loadBadgeData();
-    loadNews();
+    loadDiscussion();
 
     const badgeInterval = setInterval(loadBadgeData, 60_000);
-    const newsInterval = setInterval(loadNews, 15 * 60_000);
+    const discussionInterval = setInterval(loadDiscussion, 60 * 60_000);
 
     return () => {
       mounted = false;
       clearInterval(badgeInterval);
-      clearInterval(newsInterval);
+      clearInterval(discussionInterval);
     };
   }, []);
 
@@ -101,34 +97,33 @@ const Carousel = () => {
         </div>
       </div>
       <div className="carousel__track">
-        {articles.length === 0 && (
-          <div className="carousel__card carousel__news-card">
-            <div className="carousel__news-loading">Loading news...</div>
+        {sections.length === 0 && (
+          <div className="carousel__card carousel__forecast-card">
+            <div className="carousel__forecast-loading">Loading forecast...</div>
           </div>
         )}
-        {articles.map((article, index) => (
-          <a
-            key={article.link}
-            className={`carousel__card carousel__news-card${article.imageUrl ? ' has-image' : ''}`}
-            href={article.link}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={
-              article.imageUrl
-                ? { backgroundImage: `url(${article.imageUrl})` }
-                : undefined
-            }
+        {sections.map(section => (
+          <div
+            key={section.key}
+            className={`carousel__card carousel__forecast-card carousel__forecast-card--${section.key}`}
           >
-            <h3 className="carousel__news-title">{article.title}</h3>
-            <div className="carousel__news-meta">
-              {article.source && (
-                <span className="carousel__news-source">{article.source}</span>
-              )}
-              {article.pubDate && (
-                <span className="carousel__news-time">{timeAgo(article.pubDate)}</span>
-              )}
-            </div>
-          </a>
+            <h3 className="carousel__forecast-title">{section.title}</h3>
+            {section.summary && (
+              <div className="carousel__forecast-section">
+                <span className="carousel__forecast-label">24hr Summary</span>
+                <p className="carousel__forecast-text">{section.summary}</p>
+              </div>
+            )}
+            {section.forecast && (
+              <div className="carousel__forecast-section">
+                <span className="carousel__forecast-label">Forecast</span>
+                <p className="carousel__forecast-text">{section.forecast}</p>
+              </div>
+            )}
+            {section.issueTime && (
+              <p className="carousel__forecast-issued">Issued {formatIssueTime(section.issueTime)}</p>
+            )}
+          </div>
         ))}
       </div>
     </div>

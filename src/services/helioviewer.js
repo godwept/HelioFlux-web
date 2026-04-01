@@ -53,37 +53,58 @@ export function getImageUrl(imageId, width = IMAGE_WIDTH) {
 }
 
 /**
- * Fetch 30 frames of AIA 304 imagery over 7.5 hours (15 min intervals)
+ * Fetch 60 frames of AIA 304 imagery over 15 hours (15 min intervals).
+ * Throws if SDO data is stale (> 6 hours old) or if only a single unique
+ * image is available (instrument offline).
  * @returns {Promise<Array<string>>} Array of image URLs
  */
 export async function fetchSolarFrames() {
   const now = new Date();
   const frameCount = 60;
-  const intervalMinutes = 15; // 15 minutes between frames
-  
-  // Calculate time range: 7.5 hours ago to now
+  const intervalMinutes = 15;
   const totalMinutes = (frameCount - 1) * intervalMinutes;
-  
+
+  // Probe the most recent available image first.
+  const latestData = await getClosestImage(now);
+  const latestImageDate = new Date(latestData.date.replace(' ', 'T') + 'Z');
+  const ageMs = now - latestImageDate;
+  const sixHoursMs = 6 * 60 * 60 * 1000;
+
+  if (ageMs > sixHoursMs) {
+    const ageHours = Math.round(ageMs / (60 * 60 * 1000));
+    throw new Error(
+      `SDO imagery is currently unavailable — last image received ${ageHours}h ago`
+    );
+  }
+
   try {
-    // Fetch all frames concurrently
     const promises = [];
     for (let i = 0; i < frameCount; i++) {
-      const frameTime = new Date(now.getTime() - (totalMinutes - i * intervalMinutes) * 60000);
+      const frameTime = new Date(
+        now.getTime() - (totalMinutes - i * intervalMinutes) * 60000
+      );
       promises.push(
         getClosestImage(frameTime).then(imageData => ({
           index: i,
           url: getImageUrl(imageData.id),
           date: imageData.date,
+          id: imageData.id,
         }))
       );
     }
-    
+
     const results = await Promise.all(promises);
-    
-    // Sort by index to ensure correct order (oldest to newest)
     results.sort((a, b) => a.index - b.index);
-    
-    return results.map(r => r.url);
+
+    // Deduplicate by image ID to handle any partial gaps in the data stream.
+    const seen = new Set();
+    const unique = results.filter(r => {
+      if (seen.has(r.id)) return false;
+      seen.add(r.id);
+      return true;
+    });
+
+    return unique.map(r => r.url);
   } catch (error) {
     console.error('Error fetching solar frames:', error);
     throw error;
