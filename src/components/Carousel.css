@@ -83,6 +83,12 @@
   flex-direction: column;
   gap: var(--space-sm);
   min-height: 200px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.carousel__forecast-card:active {
+  background: var(--bg-medium);
 }
 
 .carousel__forecast-card--solar    { border-left-color: var(--solar-primary); }
@@ -128,11 +134,34 @@
   overflow: hidden;
 }
 
+.carousel__forecast-text--expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+}
+
+.carousel__forecast-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin: auto 0 0;
+}
+
 .carousel__forecast-issued {
   font-size: 0.62rem;
   color: var(--text-tertiary);
   letter-spacing: 0.04em;
-  margin: auto 0 0;
+  margin: 0;
+}
+
+.carousel__forecast-expand-hint {
+  font-size: 0.6rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  opacity: 0.7;
 }
 
 .carousel__forecast-loading {

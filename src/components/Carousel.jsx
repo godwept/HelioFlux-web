@@ -31,6 +31,7 @@ const Carousel = () => {
   const [bz, setBz] = useState(null);
   const [flareLabel, setFlareLabel] = useState(null);
   const [sections, setSections] = useState([]);
+  const [expandedKey, setExpandedKey] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -102,29 +103,38 @@ const Carousel = () => {
             <div className="carousel__forecast-loading">Loading forecast...</div>
           </div>
         )}
-        {sections.map(section => (
-          <div
-            key={section.key}
-            className={`carousel__card carousel__forecast-card carousel__forecast-card--${section.key}`}
-          >
-            <h3 className="carousel__forecast-title">{section.title}</h3>
-            {section.summary && (
-              <div className="carousel__forecast-section">
-                <span className="carousel__forecast-label">24hr Summary</span>
-                <p className="carousel__forecast-text">{section.summary}</p>
+        {sections.map(section => {
+          const expanded = expandedKey === section.key;
+          return (
+            <div
+              key={section.key}
+              className={`carousel__card carousel__forecast-card carousel__forecast-card--${section.key}${expanded ? ' carousel__forecast-card--expanded' : ''}`}
+              onClick={() => setExpandedKey(expanded ? null : section.key)}
+              role="button"
+              aria-expanded={expanded}
+            >
+              <h3 className="carousel__forecast-title">{section.title}</h3>
+              {section.summary && (
+                <div className="carousel__forecast-section">
+                  <span className="carousel__forecast-label">24hr Summary</span>
+                  <p className={`carousel__forecast-text${expanded ? ' carousel__forecast-text--expanded' : ''}`}>{section.summary}</p>
+                </div>
+              )}
+              {section.forecast && (
+                <div className="carousel__forecast-section">
+                  <span className="carousel__forecast-label">Forecast</span>
+                  <p className={`carousel__forecast-text${expanded ? ' carousel__forecast-text--expanded' : ''}`}>{section.forecast}</p>
+                </div>
+              )}
+              <div className="carousel__forecast-footer">
+                {section.issueTime && (
+                  <p className="carousel__forecast-issued">Issued {formatIssueTime(section.issueTime)}</p>
+                )}
+                <span className="carousel__forecast-expand-hint">{expanded ? 'Tap to collapse' : 'Tap to expand'}</span>
               </div>
-            )}
-            {section.forecast && (
-              <div className="carousel__forecast-section">
-                <span className="carousel__forecast-label">Forecast</span>
-                <p className="carousel__forecast-text">{section.forecast}</p>
-              </div>
-            )}
-            {section.issueTime && (
-              <p className="carousel__forecast-issued">Issued {formatIssueTime(section.issueTime)}</p>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
