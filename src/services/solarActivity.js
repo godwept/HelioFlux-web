@@ -102,6 +102,17 @@ const parseTimestamp = value => {
   return Number.isNaN(date.valueOf()) ? null : date;
 };
 
+const formatRegionLabel = value => {
+  const raw = String(value ?? '').trim();
+  if (!raw) {
+    return null;
+  }
+  if (raw.startsWith('1') && raw.length >= 5) {
+    return raw.slice(1);
+  }
+  return raw;
+};
+
 function parseFlareProbabilities(text) {
   const lines = text.split(/\r?\n/);
   let maxC = 0;
@@ -316,20 +327,30 @@ export async function fetchActiveRegions(startTime, endTime) {
 
   const data = await fetchJson(`${HEK_BASE_URL}?${params.toString()}`);
   const results = Array.isArray(data?.result) ? data.result : [];
-  return results
-    .map(region => ({
-      id: region.ar_noaanum,
-      number: region.ar_noaanum,
-      x: Number(region.hpc_x),
-      y: Number(region.hpc_y),
-    }))
-    .filter(
-      region =>
-        Number.isFinite(region.x) &&
-        Number.isFinite(region.y) &&
-        Math.abs(region.x) < 1000 &&
-        Math.abs(region.y) < 1000
-    );
+  const deduped = new Map();
+
+  results.forEach(region => {
+    const id = String(region?.ar_noaanum ?? '').trim();
+    const x = Number(region?.hpc_x);
+    const y = Number(region?.hpc_y);
+
+    if (!id || !Number.isFinite(x) || !Number.isFinite(y)) {
+      return;
+    }
+
+    if (Math.abs(x) >= 1000 || Math.abs(y) >= 1000) {
+      return;
+    }
+
+    deduped.set(id, {
+      id,
+      number: formatRegionLabel(id),
+      x,
+      y,
+    });
+  });
+
+  return [...deduped.values()];
 }
 
 export async function fetchLastModified(url) {

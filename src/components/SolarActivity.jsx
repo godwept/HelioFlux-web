@@ -121,7 +121,8 @@ const usePinchZoom = () => {
     onPointerCancel: resetPointers,
     onPointerLeave: resetPointers,
     onDoubleClick: resetZoom,
-    touchAction: transform.scale > 1 ? 'none' : 'pan-x',
+    resetZoom,
+    touchAction: 'none',
     style: {
       transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${transform.scale})`,
     },
@@ -134,17 +135,16 @@ const SolarActivity = () => {
     m: 0,
     x: 0,
   });
-  const magnetogramZoom = usePinchZoom();
-  const lascoC2Zoom = usePinchZoom();
-  const lascoC3Zoom = usePinchZoom();
-  const enlilZoom = usePinchZoom();
+  const fullscreenZoom = usePinchZoom();
+  const [fullscreenImagery, setFullscreenImagery] = useState(null);
   const [imagery, setImagery] = useState({
     magnetogram: { url: MAGNETOGRAM_URL, timestamp: null, regions: [] },
     lascoC2: { url: LASCO_C2_GIF_URL, timestamp: null },
     lascoC3: { url: LASCO_C3_GIF_URL, timestamp: null },
     enlil: { frames: [], timestamp: null },
   });
-  const enlilCanvasRef = useRef(null);
+  const enlilInlineCanvasRef = useRef(null);
+  const enlilFullscreenCanvasRef = useRef(null);
   const enlilImagesRef = useRef([]);
   const enlilAnimationRef = useRef(null);
   const enlilFrameRef = useRef(0);
@@ -163,6 +163,27 @@ const SolarActivity = () => {
   const [error, setError] = useState(null);
   const [imageryLoading, setImageryLoading] = useState(true);
   const [imageryError, setImageryError] = useState(null);
+
+  useEffect(() => {
+    if (!fullscreenImagery) {
+      return undefined;
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = event => {
+      if (event.key === 'Escape') {
+        setFullscreenImagery(null);
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [fullscreenImagery]);
 
   useEffect(() => {
     let isMounted = true;
@@ -377,16 +398,22 @@ const SolarActivity = () => {
   }, [imagery.enlil.frames]);
 
   useEffect(() => {
-    if (!enlilImagesRef.current.length) {
+    if (enlilLoading || !enlilImagesRef.current.length) {
       return undefined;
     }
 
-    const canvas = enlilCanvasRef.current;
+    const canvas =
+      fullscreenImagery === 'enlil'
+        ? enlilFullscreenCanvasRef.current
+        : enlilInlineCanvasRef.current;
     if (!canvas) {
       return undefined;
     }
 
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return undefined;
+    }
 
     const setupCanvas = () => {
       const size = canvas.offsetWidth;
@@ -408,19 +435,26 @@ const SolarActivity = () => {
     };
 
     setupCanvas();
-    startEnlilAnimation();
+    startEnlilAnimation(canvas);
 
     window.addEventListener('resize', setupCanvas);
-    return () => window.removeEventListener('resize', setupCanvas);
-  }, [enlilLoading]);
+    return () => {
+      window.removeEventListener('resize', setupCanvas);
+      if (enlilAnimationRef.current) {
+        cancelAnimationFrame(enlilAnimationRef.current);
+      }
+    };
+  }, [enlilLoading, imagery.enlil.frames, fullscreenImagery]);
 
-  const startEnlilAnimation = () => {
-    const canvas = enlilCanvasRef.current;
+  const startEnlilAnimation = canvas => {
     if (!canvas || !enlilImagesRef.current.length) {
       return;
     }
 
     const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      return;
+    }
     const frameDelay = 200;
 
     const drawContain = image => {
@@ -442,6 +476,7 @@ const SolarActivity = () => {
     const drawFrame = timestamp => {
       const size = canvas.offsetWidth;
       if (!size) {
+        enlilAnimationRef.current = requestAnimationFrame(drawFrame);
         return;
       }
 
@@ -519,6 +554,77 @@ const SolarActivity = () => {
       timeZone: 'UTC',
     });
 
+  const openFullscreen = imageryType => {
+    fullscreenZoom.resetZoom();
+    setFullscreenImagery(imageryType);
+  };
+
+  const closeFullscreen = () => {
+    fullscreenZoom.resetZoom();
+    setFullscreenImagery(null);
+  };
+
+  const handleImageryFrameKeyDown = (event, imageryType) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openFullscreen(imageryType);
+    }
+  };
+
+  const fullscreenTitles = {
+    magnetogram: 'HMI Magnetogram',
+    lascoC2: 'LASCO C2',
+    lascoC3: 'LASCO C3',
+    enlil: 'WSA-Enlil',
+  };
+
+  const renderFullscreenImagery = () => {
+    if (fullscreenImagery === 'magnetogram') {
+      return (
+        <>
+          <img src={imagery.magnetogram.url} alt="HMI magnetogram" />
+          {regionMarkers.map(marker => (
+            <span
+              key={marker.id}
+              className="solar-activity__region"
+              style={{ left: marker.left, top: marker.top }}
+            >
+              {marker.number}
+            </span>
+          ))}
+        </>
+      );
+    }
+
+    if (fullscreenImagery === 'lascoC2') {
+      return <img src={imagery.lascoC2.url} alt="LASCO C2 coronagraph" />;
+    }
+
+    if (fullscreenImagery === 'lascoC3') {
+      return <img src={imagery.lascoC3.url} alt="LASCO C3 coronagraph" />;
+    }
+
+    if (fullscreenImagery === 'enlil') {
+      if (enlilLoading) {
+        return <div className="solar-activity__image-fallback">Loading animation...</div>;
+      }
+
+      if (!enlilImagesRef.current.length) {
+        return <div className="solar-activity__image-fallback">No animation frames</div>;
+      }
+
+      return (
+        <canvas
+          ref={enlilFullscreenCanvasRef}
+          className="solar-activity__canvas"
+          aria-label="WSA-Enlil solar wind model"
+        />
+      );
+    }
+
+    return null;
+  };
+
   return (
     <section className="solar-activity">
       <header className="solar-activity__header">
@@ -560,28 +666,22 @@ const SolarActivity = () => {
                   <span className="solar-activity__source">SDO</span>
                 </div>
                 <div
-                  className="solar-activity__image-frame solar-activity__image-frame--zoomable"
-                  ref={magnetogramZoom.ref}
-                  onPointerDown={magnetogramZoom.onPointerDown}
-                  onPointerMove={magnetogramZoom.onPointerMove}
-                  onPointerUp={magnetogramZoom.onPointerUp}
-                  onPointerCancel={magnetogramZoom.onPointerCancel}
-                  onPointerLeave={magnetogramZoom.onPointerLeave}
-                  onDoubleClick={magnetogramZoom.onDoubleClick}
-                  style={{ touchAction: magnetogramZoom.touchAction }}
+                  className="solar-activity__image-frame solar-activity__image-frame--interactive"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openFullscreen('magnetogram')}
+                  onKeyDown={event => handleImageryFrameKeyDown(event, 'magnetogram')}
                 >
-                  <div className="solar-activity__zoom" style={magnetogramZoom.style}>
-                    <img src={imagery.magnetogram.url} alt="HMI magnetogram" />
-                    {regionMarkers.map(marker => (
-                      <span
-                        key={marker.id}
-                        className="solar-activity__region"
-                        style={{ left: marker.left, top: marker.top }}
-                      >
-                        {marker.number}
-                      </span>
-                    ))}
-                  </div>
+                  <img src={imagery.magnetogram.url} alt="HMI magnetogram" />
+                  {regionMarkers.map(marker => (
+                    <span
+                      key={marker.id}
+                      className="solar-activity__region"
+                      style={{ left: marker.left, top: marker.top }}
+                    >
+                      {marker.number}
+                    </span>
+                  ))}
                 </div>
                 {imagery.magnetogram.timestamp ? (
                   <span className="solar-activity__caption">
@@ -596,19 +696,13 @@ const SolarActivity = () => {
                   <span className="solar-activity__source">SOHO</span>
                 </div>
                 <div
-                  className="solar-activity__image-frame solar-activity__image-frame--zoomable"
-                  ref={lascoC2Zoom.ref}
-                  onPointerDown={lascoC2Zoom.onPointerDown}
-                  onPointerMove={lascoC2Zoom.onPointerMove}
-                  onPointerUp={lascoC2Zoom.onPointerUp}
-                  onPointerCancel={lascoC2Zoom.onPointerCancel}
-                  onPointerLeave={lascoC2Zoom.onPointerLeave}
-                  onDoubleClick={lascoC2Zoom.onDoubleClick}
-                  style={{ touchAction: lascoC2Zoom.touchAction }}
+                  className="solar-activity__image-frame solar-activity__image-frame--interactive"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openFullscreen('lascoC2')}
+                  onKeyDown={event => handleImageryFrameKeyDown(event, 'lascoC2')}
                 >
-                  <div className="solar-activity__zoom" style={lascoC2Zoom.style}>
-                    <img src={imagery.lascoC2.url} alt="LASCO C2 coronagraph" />
-                  </div>
+                  <img src={imagery.lascoC2.url} alt="LASCO C2 coronagraph" />
                 </div>
                 {imagery.lascoC2.timestamp ? (
                   <span className="solar-activity__caption">
@@ -623,19 +717,13 @@ const SolarActivity = () => {
                   <span className="solar-activity__source">SOHO</span>
                 </div>
                 <div
-                  className="solar-activity__image-frame solar-activity__image-frame--zoomable"
-                  ref={lascoC3Zoom.ref}
-                  onPointerDown={lascoC3Zoom.onPointerDown}
-                  onPointerMove={lascoC3Zoom.onPointerMove}
-                  onPointerUp={lascoC3Zoom.onPointerUp}
-                  onPointerCancel={lascoC3Zoom.onPointerCancel}
-                  onPointerLeave={lascoC3Zoom.onPointerLeave}
-                  onDoubleClick={lascoC3Zoom.onDoubleClick}
-                  style={{ touchAction: lascoC3Zoom.touchAction }}
+                  className="solar-activity__image-frame solar-activity__image-frame--interactive"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openFullscreen('lascoC3')}
+                  onKeyDown={event => handleImageryFrameKeyDown(event, 'lascoC3')}
                 >
-                  <div className="solar-activity__zoom" style={lascoC3Zoom.style}>
-                    <img src={imagery.lascoC3.url} alt="LASCO C3 coronagraph" />
-                  </div>
+                  <img src={imagery.lascoC3.url} alt="LASCO C3 coronagraph" />
                 </div>
                 {imagery.lascoC3.timestamp ? (
                   <span className="solar-activity__caption">
@@ -650,33 +738,27 @@ const SolarActivity = () => {
                   <span className="solar-activity__source">NOAA</span>
                 </div>
                 <div
-                  className="solar-activity__image-frame solar-activity__image-frame--contain solar-activity__image-frame--zoomable"
-                  ref={enlilZoom.ref}
-                  onPointerDown={enlilZoom.onPointerDown}
-                  onPointerMove={enlilZoom.onPointerMove}
-                  onPointerUp={enlilZoom.onPointerUp}
-                  onPointerCancel={enlilZoom.onPointerCancel}
-                  onPointerLeave={enlilZoom.onPointerLeave}
-                  onDoubleClick={enlilZoom.onDoubleClick}
-                  style={{ touchAction: enlilZoom.touchAction }}
+                  className="solar-activity__image-frame solar-activity__image-frame--contain solar-activity__image-frame--interactive"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openFullscreen('enlil')}
+                  onKeyDown={event => handleImageryFrameKeyDown(event, 'enlil')}
                 >
-                  <div className="solar-activity__zoom" style={enlilZoom.style}>
-                    {enlilLoading ? (
-                      <div className="solar-activity__image-fallback">
-                        Loading animation...
-                      </div>
-                    ) : enlilImagesRef.current.length ? (
+                  {enlilLoading ? (
+                    <div className="solar-activity__image-fallback">Loading animation...</div>
+                  ) : enlilImagesRef.current.length ? (
+                    fullscreenImagery === 'enlil' ? (
+                      <div className="solar-activity__image-fallback">Animation in fullscreen</div>
+                    ) : (
                       <canvas
-                        ref={enlilCanvasRef}
+                        ref={enlilInlineCanvasRef}
                         className="solar-activity__canvas"
                         aria-label="WSA-Enlil solar wind model"
                       />
-                    ) : (
-                      <div className="solar-activity__image-fallback">
-                        No animation frames
-                      </div>
-                    )}
-                  </div>
+                    )
+                  ) : (
+                    <div className="solar-activity__image-fallback">No animation frames</div>
+                  )}
                 </div>
                 {imagery.enlil.timestamp ? (
                   <span className="solar-activity__caption">
@@ -688,6 +770,34 @@ const SolarActivity = () => {
           </div>
         )}
       </div>
+
+      {fullscreenImagery ? (
+        <div className="solar-activity__fullscreen" role="dialog" aria-modal="true">
+          <div className="solar-activity__fullscreen-meta">
+            <span className="solar-activity__fullscreen-title">
+              {fullscreenTitles[fullscreenImagery]}
+            </span>
+            <span>Pinch to zoom. Tap image to close.</span>
+          </div>
+          <div
+            className="solar-activity__image-frame solar-activity__image-frame--contain solar-activity__image-frame--zoomable solar-activity__fullscreen-frame"
+            ref={fullscreenZoom.ref}
+            onPointerDown={fullscreenZoom.onPointerDown}
+            onPointerMove={fullscreenZoom.onPointerMove}
+            onPointerUp={fullscreenZoom.onPointerUp}
+            onPointerCancel={fullscreenZoom.onPointerCancel}
+            onPointerLeave={fullscreenZoom.onPointerLeave}
+            onDoubleClick={fullscreenZoom.onDoubleClick}
+            onClick={closeFullscreen}
+            style={{ touchAction: fullscreenZoom.touchAction }}
+          >
+            <div className="solar-activity__zoom" style={fullscreenZoom.style}>
+              {renderFullscreenImagery()}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <div className="solar-activity__section">
         <h3 className="solar-activity__section-title">X-Ray Activity</h3>
         {xrayLoading ? (
