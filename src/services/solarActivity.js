@@ -14,6 +14,8 @@ const NOAA_PROXY_BASE_URL =
   'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/noaa';
 const WORKER_BASE_URL =
   'https://helioflux-api-proxy.mathew-stewart.workers.dev/api';
+const DONKI_PROXY_BASE_URL =
+  'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/donki';
 
 export const MAGNETOGRAM_URL = `${WORKER_BASE_URL}/hmi/`;
 export const LASCO_C2_GIF_URL =
@@ -282,16 +284,37 @@ const parseFlareEvents = text => {
 };
 
 export async function fetchRecentFlares() {
-  const text = await fetchTextOptional(
-    `${NOAA_PROXY_BASE_URL}/text/solar-geophysical-event-reports.txt`
-  );
-  if (!text) {
+  const now = new Date();
+  const start = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+  const fmt = d => d.toISOString().slice(0, 10);
+  let data;
+  try {
+    const res = await fetch(
+      `${DONKI_PROXY_BASE_URL}/FLR?startDate=${fmt(start)}&endDate=${fmt(now)}`
+    );
+    if (!res.ok) return [];
+    data = await res.json();
+  } catch {
     return [];
   }
-  const events = parseFlareEvents(text);
-  const cutoff = Date.now() - 72 * 60 * 60 * 1000;
-  return events
-    .filter(event => event.timestamp.valueOf() >= cutoff)
+  if (!Array.isArray(data)) return [];
+  return data
+    .map(flr => {
+      const peakTime = flr.peakTime ?? flr.beginTime;
+      const timestamp = peakTime ? new Date(peakTime.endsWith('Z') ? peakTime : peakTime + 'Z') : null;
+      if (!timestamp || Number.isNaN(timestamp.valueOf())) return null;
+      const regionNum = flr.activeRegionNum ? flr.activeRegionNum % 10000 : null;
+      const obs = flr.instruments?.[0]?.displayName?.match(/GOES-\w+/)?.[0] ?? 'GOES';
+      return {
+        id: flr.flrID,
+        class: flr.classType ?? '?',
+        timestamp,
+        observatory: obs,
+        region: regionNum ? String(regionNum) : null,
+        location: flr.sourceLocation ?? null,
+      };
+    })
+    .filter(Boolean)
     .sort((a, b) => b.timestamp - a.timestamp);
 }
 

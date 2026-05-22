@@ -861,6 +861,7 @@ const SolarActivity = () => {
                   <div className="solar-activity__flare-meta">
                     <span>{event.observatory}</span>
                     {event.region ? <span>AR {event.region}</span> : null}
+                    {event.location ? <span>{event.location}</span> : null}
                   </div>
                 </li>
               ))}

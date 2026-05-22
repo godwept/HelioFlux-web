@@ -42,7 +42,7 @@
  */
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname;
 
@@ -91,6 +91,13 @@ export default {
       else if (path.startsWith('/api/enlil/')) {
         const enlilPath = path.replace('/api/enlil/', '');
         targetUrl = `https://services.swpc.noaa.gov/images/animations/enlil/${enlilPath}`;
+      }
+      // NASA DONKI space weather events
+      else if (path.startsWith('/api/donki/')) {
+        const donkiPath = path.replace('/api/donki', '');
+        const apiKey = env.NASA_API_KEY || 'DEMO_KEY';
+        const separator = url.search ? '&' : '?';
+        targetUrl = `https://api.nasa.gov/DONKI${donkiPath}${url.search}${separator}api_key=${apiKey}`;
       }
       // HEK active region data
       else if (path.startsWith('/api/hek')) {
