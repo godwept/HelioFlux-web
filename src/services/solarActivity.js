@@ -224,7 +224,7 @@ export async function fetchXrayFlux() {
 const parseFlareEvents = text => {
   const events = [];
   const lines = text.split(/\r?\n/);
-  const dateLine = lines.find(line => line.startsWith(':Product:'));
+  const dateLine = lines.find(line => line.startsWith(':Date:'));
   const dateMatch = dateLine?.match(/:Date:\s*(\d{4})\s+(\d{2})\s+(\d{2})/);
   const fallbackDate = new Date();
   const fileDate = dateMatch
@@ -239,6 +239,10 @@ const parseFlareEvents = text => {
     }
 
     const parts = line.trim().split(/\s+/);
+    // Remove the optional single-character qualifier (e.g. '+') after the event number
+    if (parts.length > 1 && /^[+\-*?]$/.test(parts[1])) {
+      parts.splice(1, 1);
+    }
     if (parts.length < 9) {
       return;
     }
