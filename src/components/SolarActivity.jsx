@@ -843,11 +843,14 @@ const SolarActivity = () => {
                 <li key={`${event.id}-${event.timestamp.toISOString()}`} className="solar-activity__flare-item">
                   <div className="solar-activity__flare-main">
                     <span
-                      className={
-                        event.class?.startsWith('X')
-                          ? 'solar-activity__flare-class solar-activity__flare-class--x'
-                          : 'solar-activity__flare-class solar-activity__flare-class--m'
-                      }
+                      className={[
+                        'solar-activity__flare-class',
+                        event.class?.startsWith('X') ? 'solar-activity__flare-class--x'
+                        : event.class?.startsWith('M') ? 'solar-activity__flare-class--m'
+                        : event.class?.startsWith('C') ? 'solar-activity__flare-class--c'
+                        : event.class?.startsWith('B') ? 'solar-activity__flare-class--b'
+                        : 'solar-activity__flare-class--a',
+                      ].join(' ')}
                     >
                       {event.class}
                     </span>
@@ -864,7 +867,7 @@ const SolarActivity = () => {
             </ul>
           </div>
         ) : (
-          <div className="panel solar-activity__placeholder">No M/X flares in the last 72 hours.</div>
+          <div className="panel solar-activity__placeholder">No flares in the last 72 hours.</div>
         )}
       </div>
       <div className="solar-activity__section">

@@ -278,6 +278,18 @@
   color: var(--alert-red);
 }
 
+.solar-activity__flare-class--a {
+  color: var(--text-secondary);
+}
+
+.solar-activity__flare-class--b {
+  color: #30d158;
+}
+
+.solar-activity__flare-class--c {
+  color: #64d2ff;
+}
+
 .solar-activity__flare-class--m {
   color: #ff9f0a;
 }

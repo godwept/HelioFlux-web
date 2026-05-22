@@ -253,15 +253,6 @@ const parseFlareEvents = text => {
       return;
     }
 
-    const classLetter = flareClass[0];
-    const classValue = parseFloat(flareClass.slice(1)) || 0;
-    if (classLetter === 'M' && classValue < 1) {
-      return;
-    }
-    if (classLetter !== 'M' && classLetter !== 'X') {
-      return;
-    }
-
     const maxTime = parts[2];
     if (!maxTime || maxTime.length < 3 || maxTime.includes('/')) {
       return;
