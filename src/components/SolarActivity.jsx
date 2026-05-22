@@ -5,6 +5,7 @@ import {
   fetchEnlilFrames,
   fetchFlareProbabilities,
   fetchLastModified,
+  fetchRecentCMEs,
   fetchRecentFlares,
   fetchXrayFlux,
   LASCO_C2_GIF_URL,
@@ -156,6 +157,9 @@ const SolarActivity = () => {
   const [flareEvents, setFlareEvents] = useState([]);
   const [flareLoading, setFlareLoading] = useState(true);
   const [flareError, setFlareError] = useState(null);
+  const [cmeEvents, setCmeEvents] = useState([]);
+  const [cmeLoading, setCmeLoading] = useState(true);
+  const [cmeError, setCmeError] = useState(null);
   const [epamData, setEpamData] = useState([]);
   const [epamLoading, setEpamLoading] = useState(true);
   const [epamError, setEpamError] = useState(null);
@@ -263,6 +267,34 @@ const SolarActivity = () => {
     };
 
     loadFlares();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadCMEs = async () => {
+      try {
+        setCmeError(null);
+        const events = await fetchRecentCMEs();
+        if (isMounted) {
+          setCmeEvents(events);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setCmeError(err.message ?? 'Unable to load recent CMEs.');
+        }
+      } finally {
+        if (isMounted) {
+          setCmeLoading(false);
+        }
+      }
+    };
+
+    loadCMEs();
 
     return () => {
       isMounted = false;
@@ -869,6 +901,52 @@ const SolarActivity = () => {
           </div>
         ) : (
           <div className="panel solar-activity__placeholder">No flares in the last 72 hours.</div>
+        )}
+      </div>
+      <div className="solar-activity__section">
+        <h3 className="solar-activity__section-title">Recent CMEs</h3>
+        {cmeLoading ? (
+          <div className="panel solar-activity__placeholder">Loading recent CMEs...</div>
+        ) : cmeError ? (
+          <div className="panel solar-activity__placeholder">{cmeError}</div>
+        ) : cmeEvents.length ? (
+          <div className="panel solar-activity__flare-panel">
+            <ul className="solar-activity__flare-list">
+              {cmeEvents.map(cme => (
+                <li key={cme.id} className="solar-activity__flare-item">
+                  <div className="solar-activity__flare-main">
+                    <span className={[
+                      'solar-activity__cme-speed',
+                      cme.speed >= 1000 ? 'solar-activity__cme-speed--fast'
+                      : cme.speed >= 500 ? 'solar-activity__cme-speed--medium'
+                      : 'solar-activity__cme-speed--slow',
+                    ].join(' ')}>
+                      {cme.speed != null ? `${Math.round(cme.speed)} km/s` : '— km/s'}
+                    </span>
+                    <span className="solar-activity__flare-time">
+                      {formatEventTime(cme.timestamp)} UTC
+                    </span>
+                  </div>
+                  <div className="solar-activity__flare-meta">
+                    {cme.direction ? <span>{cme.direction}</span> : null}
+                    {cme.halfAngle != null ? <span>±{cme.halfAngle}° wide</span> : null}
+                    {cme.link ? (
+                      <a
+                        href={cme.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="solar-activity__cme-link"
+                      >
+                        Details ↗
+                      </a>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <div className="panel solar-activity__placeholder">No CMEs in the last 72 hours.</div>
         )}
       </div>
       <div className="solar-activity__section">

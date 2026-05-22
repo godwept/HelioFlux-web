@@ -310,6 +310,33 @@
   color: var(--text-tertiary);
 }
 
+.solar-activity__cme-speed {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.solar-activity__cme-speed--slow {
+  color: var(--text-secondary);
+}
+
+.solar-activity__cme-speed--medium {
+  color: #ff9f0a;
+}
+
+.solar-activity__cme-speed--fast {
+  color: #ff3b30;
+}
+
+.solar-activity__cme-link {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: auto;
+}
+
+.solar-activity__cme-link:hover {
+  text-decoration: underline;
+}
+
 @keyframes enlilFade {
   from {
     opacity: 0.4;

@@ -318,6 +318,46 @@ export async function fetchRecentFlares() {
     .sort((a, b) => b.timestamp - a.timestamp);
 }
 
+export async function fetchRecentCMEs() {
+  const now = new Date();
+  const start = new Date(now.getTime() - 72 * 60 * 60 * 1000);
+  const fmt = d => d.toISOString().slice(0, 10);
+  let data;
+  try {
+    const res = await fetch(
+      `${DONKI_PROXY_BASE_URL}/CMEAnalysis?startDate=${fmt(start)}&endDate=${fmt(now)}&mostAccurateOnly=true`
+    );
+    if (!res.ok) return [];
+    data = await res.json();
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(data)) return [];
+  return data
+    .map(cme => {
+      const raw = cme.associatedCMEstartTime ?? cme.time21_5;
+      const timestamp = raw ? new Date(raw.endsWith('Z') ? raw : raw + 'Z') : null;
+      if (!timestamp || Number.isNaN(timestamp.valueOf())) return null;
+      const lat = cme.latitude ?? null;
+      const lon = cme.longitude ?? null;
+      const direction =
+        lat !== null && lon !== null
+          ? `${Math.abs(lat)}°${lat >= 0 ? 'N' : 'S'} ${Math.abs(lon)}°${lon >= 0 ? 'E' : 'W'}`
+          : null;
+      return {
+        id: cme.associatedCMEID ?? raw,
+        timestamp,
+        speed: cme.speed ?? null,
+        halfAngle: cme.halfAngle ?? null,
+        direction,
+        type: cme.type ?? null,
+        link: cme.associatedCMELink ?? null,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.timestamp - a.timestamp);
+}
+
 export async function fetchAceEpam() {
   const text = await fetchText(`${NOAA_PROXY_BASE_URL}/text/ace-epam.txt`);
   const entries = parseAceEpam(text);
