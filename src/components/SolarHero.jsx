@@ -45,18 +45,29 @@ const SolarHero = () => {
         }
 
         if (!urls.length) {
-          urls = await fetchSolarFrames();
           try {
-            localStorage.setItem(
-              CACHE_KEY,
-              JSON.stringify({ timestamp: now, urls })
-            );
-          } catch (cacheError) {
-            console.warn('SolarHero cache write failed:', cacheError);
+            urls = await fetchSolarFrames();
+            try {
+              localStorage.setItem(
+                CACHE_KEY,
+                JSON.stringify({ timestamp: now, urls })
+              );
+            } catch (cacheError) {
+              console.warn('SolarHero cache write failed:', cacheError);
+            }
+          } catch (heroError) {
+            console.warn('SolarHero fetch failed, using fallback poster state:', heroError);
+            urls = [];
           }
         }
         
         if (!mounted) return;
+        
+        if (!urls.length) {
+          setLoading(false);
+          setError('Solar imagery is temporarily unavailable.');
+          return;
+        }
         
         // Preload all images
         const images = await Promise.all(

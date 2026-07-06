@@ -10,9 +10,9 @@
  * 3. Configure routes in wrangler.toml
  */
 
-// TODO: Replace with your Cloudflare Worker URL after deployment
-// Example: https://api.your-worker.workers.dev
-const PROXY_BASE_URL = 'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/helioviewer';
+// Prefer same-origin API routes so the app works with Cloudflare Pages Functions
+// or a local Vite proxy without depending on a separate worker hostname.
+const PROXY_BASE_URL = '/api/helioviewer';
 
 // AIA 304Å Source ID (chromosphere view)
 const AIA_304_SOURCE_ID = 13;

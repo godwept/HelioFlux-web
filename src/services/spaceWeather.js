@@ -10,15 +10,25 @@
  * 3. Configure routes in wrangler.toml
  */
 
-const NOAA_PROXY_BASE_URL =
-  'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/noaa';
+const NOAA_PROXY_BASE_URL = '/api/noaa';
 
-async function fetchJson(url) {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+async function fetchJson(url, fallbackUrls = []) {
+  const attempts = [url, ...fallbackUrls];
+  let lastError;
+
+  for (const attemptUrl of attempts) {
+    try {
+      const response = await fetch(attemptUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    } catch (error) {
+      lastError = error;
+    }
   }
-  return response.json();
+
+  throw lastError ?? new Error('Unable to load remote data');
 }
 
 function parseMagneticFieldData(rows) {
@@ -61,14 +71,22 @@ function parseKpIndex(data) {
 
 export async function fetchMagneticFieldData() {
   const data = await fetchJson(
-    `${NOAA_PROXY_BASE_URL}/products/solar-wind/mag-3-day.json`
+    `${NOAA_PROXY_BASE_URL}/products/solar-wind/mag-3-day.json`,
+    [
+      `${NOAA_PROXY_BASE_URL}/products/solar-wind/mag-2-day.json`,
+      `${NOAA_PROXY_BASE_URL}/products/solar-wind/mag-1-day.json`,
+    ]
   );
   return parseMagneticFieldData(data);
 }
 
 export async function fetchPlasmaData() {
   const data = await fetchJson(
-    `${NOAA_PROXY_BASE_URL}/products/solar-wind/plasma-3-day.json`
+    `${NOAA_PROXY_BASE_URL}/products/solar-wind/plasma-3-day.json`,
+    [
+      `${NOAA_PROXY_BASE_URL}/products/solar-wind/plasma-2-day.json`,
+      `${NOAA_PROXY_BASE_URL}/products/solar-wind/plasma-1-day.json`,
+    ]
   );
   return parsePlasmaData(data);
 }
