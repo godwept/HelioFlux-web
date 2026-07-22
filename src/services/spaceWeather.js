@@ -10,7 +10,8 @@
  * 3. Configure routes in wrangler.toml
  */
 
-const NOAA_PROXY_BASE_URL = '/api/noaa';
+const NOAA_PROXY_BASE_URL =
+  'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/noaa';
 
 async function fetchJson(url, fallbackUrls = []) {
   const attempts = [url, ...fallbackUrls];
