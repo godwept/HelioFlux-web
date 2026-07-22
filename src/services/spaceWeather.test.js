@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { fetchMagneticFieldData } from './spaceWeather.js';
+import { fetchMagneticFieldData, fetchPlasmaData } from './spaceWeather.js';
 
 test('fetches space weather data through the deployed API proxy', async () => {
   const originalFetch = globalThis.fetch;
@@ -9,8 +9,7 @@ test('fetches space weather data through the deployed API proxy', async () => {
   globalThis.fetch = async url => {
     requestedUrl = url;
     return new Response(JSON.stringify([
-      ['time_tag', 'bx_gsm', 'by_gsm', 'bz_gsm', 'lon_gsm', 'lat_gsm', 'bt'],
-      ['2026-07-22T00:00:00Z', '1', '2', '-3', '4', '5', '6'],
+      { time_tag: '2026-07-22T00:00:00', bx_gsm: 1, by_gsm: 2, bz_gsm: -3, bt: 6 },
     ]), { status: 200, headers: { 'Content-Type': 'application/json' } });
   };
 
@@ -19,9 +18,38 @@ test('fetches space weather data through the deployed API proxy', async () => {
 
     assert.equal(
       requestedUrl,
-      'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/noaa/products/solar-wind/mag-3-day.json'
+      'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/noaa/json/rtsw/rtsw_mag_1m.json'
     );
     assert.equal(data[0].bt, 6);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test('fetches plasma data from the replacement NOAA RTSW feed', async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl;
+
+  globalThis.fetch = async url => {
+    requestedUrl = url;
+    return new Response(JSON.stringify([
+      {
+        time_tag: '2026-07-22T00:00:00',
+        proton_density: 7,
+        proton_speed: 420,
+        proton_temperature: 50000,
+      },
+    ]), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  };
+
+  try {
+    const data = await fetchPlasmaData();
+
+    assert.equal(
+      requestedUrl,
+      'https://helioflux-api-proxy.mathew-stewart.workers.dev/api/noaa/json/rtsw/rtsw_wind_1m.json'
+    );
+    assert.equal(data[0].speed, 420);
   } finally {
     globalThis.fetch = originalFetch;
   }

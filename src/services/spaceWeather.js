@@ -33,6 +33,18 @@ async function fetchJson(url, fallbackUrls = []) {
 }
 
 function parseMagneticFieldData(rows) {
+  if (rows.length && !Array.isArray(rows[0])) {
+    return rows
+      .map(row => ({
+        timestamp: new Date(`${row.time_tag}Z`),
+        bx: Number(row.bx_gsm) || 0,
+        by: Number(row.by_gsm) || 0,
+        bz: Number(row.bz_gsm) || 0,
+        bt: Number(row.bt) || 0,
+      }))
+      .filter(entry => !Number.isNaN(entry.timestamp.valueOf()));
+  }
+
   return rows
     .slice(1)
     .map(row => ({
@@ -46,6 +58,21 @@ function parseMagneticFieldData(rows) {
 }
 
 function parsePlasmaData(rows) {
+  if (rows.length && !Array.isArray(rows[0])) {
+    return rows
+      .map(row => ({
+        timestamp: new Date(`${row.time_tag}Z`),
+        density: Number(row.proton_density) || 0,
+        speed: Number(row.proton_speed) || 0,
+        temperature: Number(row.proton_temperature) || 0,
+      }))
+      .filter(
+        entry =>
+          !Number.isNaN(entry.timestamp.valueOf()) &&
+          !(entry.speed === 0 && entry.density === 0)
+      );
+  }
+
   return rows
     .slice(1)
     .map(row => ({
@@ -72,22 +99,14 @@ function parseKpIndex(data) {
 
 export async function fetchMagneticFieldData() {
   const data = await fetchJson(
-    `${NOAA_PROXY_BASE_URL}/products/solar-wind/mag-3-day.json`,
-    [
-      `${NOAA_PROXY_BASE_URL}/products/solar-wind/mag-2-day.json`,
-      `${NOAA_PROXY_BASE_URL}/products/solar-wind/mag-1-day.json`,
-    ]
+    `${NOAA_PROXY_BASE_URL}/json/rtsw/rtsw_mag_1m.json`
   );
   return parseMagneticFieldData(data);
 }
 
 export async function fetchPlasmaData() {
   const data = await fetchJson(
-    `${NOAA_PROXY_BASE_URL}/products/solar-wind/plasma-3-day.json`,
-    [
-      `${NOAA_PROXY_BASE_URL}/products/solar-wind/plasma-2-day.json`,
-      `${NOAA_PROXY_BASE_URL}/products/solar-wind/plasma-1-day.json`,
-    ]
+    `${NOAA_PROXY_BASE_URL}/json/rtsw/rtsw_wind_1m.json`
   );
   return parsePlasmaData(data);
 }
